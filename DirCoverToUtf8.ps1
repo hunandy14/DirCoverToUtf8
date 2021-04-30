@@ -87,7 +87,7 @@ function DirCoverToUtf8 {
     
     if ($Preview) {
         DirCoverToUtf8_CoverFiles $FilePath $TempPath -Preview
-        DirCoverToUtf8_CopyFiles $FilePath $TempPath -Preview
+        if (!$NoCopy) { DirCoverToUtf8_CopyFiles $FilePath $TempPath -Preview }
     } else {
         if (!(Test-Path -Path $MainDirName)) {
             # 不衝突直接寫入
@@ -108,7 +108,7 @@ function DirCoverToUtf8 {
             }
         }
         DirCoverToUtf8_CoverFiles $FilePath $TempPath
-        DirCoverToUtf8_CopyFiles $FilePath $TempPath 
+        if (!$NoCopy) { DirCoverToUtf8_CopyFiles $FilePath $TempPath }
         Write-Output "轉換完畢 $FilePath --> $TempPath\$MainDirName"
     }
 }
