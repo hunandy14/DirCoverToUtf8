@@ -97,15 +97,20 @@ function DirCoverToUtf8 {
             if ($Forece) {
                 # 有衝突但Forece照樣寫入
             } else {
+                DirCoverToUtf8_CoverFiles $FilePath $TempPath -Preview
+                if (!$NoCopy) { DirCoverToUtf8_CopyFiles $FilePath $TempPath -Preview }
+                
+                Write-Output "#######################################################"
                 Write-Output "下列資料夾已經存在是否覆蓋？(按下 Y 或 Enter 覆蓋檔案)"
                 Write-Output "[$TempPath\$MainDirName]"
+                Write-Output "#######################################################"
                 $key = $host.ui.RawUI.ReadKey("NoEcho,IncludeKeyUp")
                 if(($key.Character -eq "y") -or ($key.VirtualKeyCode -eq 13)){
                     # 有衝突但按下Enter確認
                 } else {
-                    Write-Output "資料夾已存在，下面方式擇一處理"
-                    Write-Output "    - 請輸入 -Force"
-                    Write-Output "    - 移除 mystruts 資料夾"
+                    Write-Output "程序中斷::資料夾已存在（下面方式擇一處理）"
+                    Write-Output "    - 加上命令 -Force"
+                    Write-Output "    - 移除 $MainDirName 資料夾"
                     return
                 }
             }
@@ -120,5 +125,5 @@ function DirCoverToUtf8 {
 $FilePath = "Z:\SourceCode\28\struts20150313_2"
 $TempPath = $PSScriptRoot
 cd $PSScriptRoot
-# DirCoverToUtf8 $FilePath $TempPath
-DirCoverToUtf8 $FilePath $TempPath -Preview
+DirCoverToUtf8 $FilePath $TempPath
+# DirCoverToUtf8 $FilePath $TempPath -Preview
