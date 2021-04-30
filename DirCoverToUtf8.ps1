@@ -53,12 +53,12 @@ function DirCoverToUtf8_CoverFiles {
     # 資料夾名稱
     $MainDirName = $FilePath.Substring($FilePath.LastIndexof("\")+1)
     # 獲取複製項目相對路徑
-    $ExcludeItem =  Get-ChildItem -Path $FilePath `
-                        -Recurse -Include $FilterFile -Name | Sort-Object
+    $FileItem =  Get-ChildItem -Path $FilePath `
+                        -Recurse -Include $FilterFile | Sort-Object
     ###############################################################
-    for ($i = 0; $i -lt $ExcludeItem.Count; $i++) {
-        $F1=$FilePath+"\"+$ExcludeItem[$i]
-        $F2=$TempPath+"\"+$MainDirName+"\"+$ExcludeItem[$i]
+    for ($i = 0; $i -lt $FileItem.Count; $i++) {
+        $F1=$FileItem[$i].FullName
+        $F2=$TempPath+$MainDirName+$F1.Substring($FilePath.Length)
         # $Dir2=$F2 | Split-Path
         if ($Preview) {
             Write-Output "CoverFiles::預覽 [$En1 --> $En2]"
@@ -87,8 +87,8 @@ function DirCoverToUtf8 {
     $MainDirName = $FilePath.Substring($FilePath.LastIndexof("\")+1)
     
     if ($Preview) {
-        DirCoverToUtf8_CoverFiles $FilePath $TempPath -Preview
-        # DirCoverToUtf8_CopyFiles $FilePath $TempPath -Preview
+        # DirCoverToUtf8_CoverFiles $FilePath $TempPath -Preview
+        DirCoverToUtf8_CopyFiles $FilePath $TempPath -Preview
     } else {
         if (!(Test-Path -Path $MainDirName)) {
             # 不衝突直接寫入
@@ -115,7 +115,7 @@ function DirCoverToUtf8 {
 }
 
 # 路徑
-$FilePath = "Z:\SourceCode\28\struts20150313_1"
+$FilePath = "Z:\SourceCode\28\struts1"
 $TempPath = $PSScriptRoot
 cd $PSScriptRoot
 DirCoverToUtf8 $FilePath $TempPath -Preview
