@@ -1,9 +1,8 @@
-function CopyFiles {
+function DirCoverToUtf8_CopyFiles {
     param (
         [String] $FilePath,
         [String] $TempPath,
-        [bool] $DontPreview=0,
-        [bool] $Overwrite=0
+        [switch] $Preview
     )
     ########################### 控制項目 ###########################
     # 排外檔案
@@ -21,32 +20,25 @@ function CopyFiles {
     for ($i = 0; $i -lt $ExcludeItem.Count; $i++) {
         $F1=$FilePath+"\"+$ExcludeItem[$i]
         $F2=$TempPath+"\"+$MainDirName+"\"+$ExcludeItem[$i]
-        # $Dir2=$F2.Substring(0, $F2.LastIndexOf('\'))
-        if ($DontPreview) {      # 複製檔案
-            if ((Test-Path -Path $MainDirName) -and (!$Overwrite)) {
-                Write-Output "CopyFiles::目錄已經存在，請清除後重新執行"
-                return
-            } else {
-                New-Item -ItemType File -Path $F2 -Force | Out-Null
-                Copy-Item $F1 $F2
-            }
-        } else {                 # 預覽路徑
+        # $Dir2=$F2 | Split-Path
+        if ($Preview) {
             Write-Output "CopyFiles::預覽"
             Write-Output "  From: $F1"
             Write-Output "  To  : $F2"
+        } else {
+            New-Item -ItemType File -Path $F2 -Force | Out-Null
+            Copy-Item $F1 $F2
         }
     }
     
 }
 
-function CoverFiles {
+function DirCoverToUtf8_CoverFiles {
     param (
         [String] $FilePath,
         [String] $TempPath,
-        [bool] $DontPreview=0,
-        [bool] $Overwrite=0
+        [switch] $Preview
     )
-
     ########################### 控制項目 ###########################
     # 原始檔案編碼
     $En1 = "GBK"
@@ -67,20 +59,15 @@ function CoverFiles {
     for ($i = 0; $i -lt $ExcludeItem.Count; $i++) {
         $F1=$FilePath+"\"+$ExcludeItem[$i]
         $F2=$TempPath+"\"+$MainDirName+"\"+$ExcludeItem[$i]
-        # $Dir2=$F2.Substring(0, $F2.LastIndexOf('\'))
-        if ($DontPreview) {      # 轉換檔案
-            if ((Test-Path -Path $MainDirName) -and (!$Overwrite)) {
-                Write-Output "CoverFiles::目錄已經存在，請清除後重新執行"
-                return
-            } else {
-                New-Item -ItemType File -Path $F2 -Force | Out-Null
-                $ct = (Get-Content -Encoding $En1 $F1)
-                $ct | Out-File -Encoding $En2 -FilePath $F2
-            }
-        } else {                 # 預覽路徑
+        # $Dir2=$F2 | Split-Path
+        if ($Preview) {
             Write-Output "CoverFiles::預覽 [$En1 --> $En2]"
             Write-Output "  From: $F1"
             Write-Output "  To  : $F2"
+        } else {
+            New-Item -ItemType File -Path $F2 -Force | Out-Null
+            $ct = (Get-Content -Encoding $En1 $F1)
+            $ct | Out-File -Encoding $En2 -FilePath $F2
         }
     }
     
@@ -90,7 +77,8 @@ function DirCoverToUtf8 {
     param (
         [String] $FilePath,
         [String] $TempPath,
-        [bool] $DontPreview=0
+        [switch] $Preview,
+        [switch] $Force
     )
     # 修復路徑
     $FilePath = $FilePath.TrimEnd('\')
@@ -98,35 +86,36 @@ function DirCoverToUtf8 {
     # 資料夾名稱
     $MainDirName = $FilePath.Substring($FilePath.LastIndexof("\")+1)
     
-    # 預覽
-    CopyFiles $FilePath $TempPath 1 0
-    CoverFiles $FilePath $TempPath 1 0
-    # 寫入
-    if (Test-Path -Path $MainDirName) {
-        Write-Output "資料夾已經存在是否覆蓋？(按下 Y 或 Enter 覆蓋檔案)"
-        $key = $host.ui.RawUI.ReadKey("NoEcho,IncludeKeyUp")
-        
-        if(($key.Character -eq "y") -or ($key.VirtualKeyCode -eq 13)){
-            Write-Output "轉換完畢"
-            # 寫入
-            CopyFiles $FilePath $TempPath 1 1
-            CoverFiles $FilePath $TempPath 1 1
-        } else {
-            Write-Output "取消覆蓋 程式即將結束"
-            return
-        }
+    if ($Preview) {
+        DirCoverToUtf8_CoverFiles $FilePath $TempPath -Preview
+        # DirCoverToUtf8_CopyFiles $FilePath $TempPath -Preview
     } else {
-        # 寫入
-        CopyFiles $FilePath $TempPath 1 0
-        CoverFiles $FilePath $TempPath 1 0
+        if (!(Test-Path -Path $MainDirName)) {
+            # 不衝突直接寫入
+        } else {
+            if ($Forece) {
+                # 有衝突但Forece照樣寫入
+            } else {
+                Write-Output "資料夾已經存在是否覆蓋？(按下 Y 或 Enter 覆蓋檔案)"
+                $key = $host.ui.RawUI.ReadKey("NoEcho,IncludeKeyUp")
+                if(($key.Character -eq "y") -or ($key.VirtualKeyCode -eq 13)){
+                    # 有衝突但按下Enter確認
+                } else {
+                    Write-Output "資料夾已存在，下面方式擇一處理"
+                    Write-Output "    - 請輸入 -Force"
+                    Write-Output "    - 移除 mystruts 資料夾"
+                    return
+                }
+            }
+        }
+        DirCoverToUtf8_CoverFiles $FilePath $TempPath
+        DirCoverToUtf8_CopyFiles $FilePath $TempPath 
+        Write-Output "轉換完畢 $FilePath --> $TempPath\$MainDirName"
     }
-    
-    
 }
 
 # 路徑
-$FilePath = "Z:\SourceCode\28\mystruts"
+$FilePath = "Z:\SourceCode\28\struts20150313_1"
 $TempPath = $PSScriptRoot
 cd $PSScriptRoot
-
-DirCoverToUtf8 $FilePath $TempPath 0
+DirCoverToUtf8 $FilePath $TempPath -Preview
