@@ -7,6 +7,7 @@ function DirCoverToUtf8_CopyFiles {
     ########################### 控制項目 ###########################
     # 排外檔案
     $ExcludeFile = @("*.java", "*.class")
+    $ExcludeDir = "\\WebRoot\\WEB-INF\\classes\\|\\.settings\\"
     ###############################################################
     # 修復路徑
     $FilePath = $FilePath.TrimEnd('\')
@@ -14,8 +15,9 @@ function DirCoverToUtf8_CopyFiles {
     # 資料夾名稱
     $MainDirName = $FilePath.Substring($FilePath.LastIndexof("\")+1)
     # 獲取複製項目相對路徑
-    $FileItem = Get-ChildItem -Path $FilePath `
-                        -Recurse -Exclude $ExcludeFile -File | Sort-Object
+    $FileItem = ((Get-ChildItem -Recurse `
+        -Path $FilePath -Exclude $ExcludeFile -File)`
+        -notmatch "$ExcludeDir") | Sort-Object
     ###############################################################
     for ($i = 0; $i -lt $FileItem.Count; $i++) {
         $F1=$FileItem[$i].FullName
@@ -115,8 +117,8 @@ function DirCoverToUtf8 {
 }
 
 # 路徑
-$FilePath = "Z:\SourceCode\28\struts1"
+$FilePath = "Z:\SourceCode\28\struts20150313_2"
 $TempPath = $PSScriptRoot
 cd $PSScriptRoot
-DirCoverToUtf8 $FilePath $TempPath
-# DirCoverToUtf8 $FilePath $TempPath -Preview
+# DirCoverToUtf8 $FilePath $TempPath
+DirCoverToUtf8 $FilePath $TempPath -Preview
