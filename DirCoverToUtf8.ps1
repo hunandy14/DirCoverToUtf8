@@ -95,7 +95,8 @@ function DirCoverToUtf8 {
             if ($Forece) {
                 # 有衝突但Forece照樣寫入
             } else {
-                Write-Output "資料夾已經存在是否覆蓋？(按下 Y 或 Enter 覆蓋檔案)"
+                Write-Output "下列資料夾已經存在是否覆蓋？(按下 Y 或 Enter 覆蓋檔案)"
+                Write-Output "[$TempPath\$MainDirName]"
                 $key = $host.ui.RawUI.ReadKey("NoEcho,IncludeKeyUp")
                 if(($key.Character -eq "y") -or ($key.VirtualKeyCode -eq 13)){
                     # 有衝突但按下Enter確認
