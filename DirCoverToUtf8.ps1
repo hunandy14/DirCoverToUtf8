@@ -13,41 +13,60 @@ function  CovertFileEncoding ($F1, $En1, $En2, $F2, $tempPath){
     CovertFileEncoding_basic $F1 $En1 $En2 $F2
 }
 
+function FixFilePath($Path){
+    
+}
 function CopyFiles {
     param (
         [String] $FilePath,
-        [String] $TempPath
+        [String] $TempPath,
+        [bool] $DontPreview=0
     )
-    $ExcludeFile = "*.java"
-
-    # 獲取直接複製的檔案
-    $listCopy = Get-ChildItem -Path $FilePath -Recurse -Exclude $ExcludeFile -File
-    # 獲取直接複製的檔案相對路徑
-    $listCopyN = Get-ChildItem -Path $FilePath -Recurse -Exclude $ExcludeFile -File  -Name
-
-    for ($i = 0; $i -lt $listCopy.Count; $i++) {
-        $F1=$FilePath+"\"+$listCopyN[$i]
-        $F2=$TempPath+"\"+$listCopyN[$i]
-        $DirFullName=$listCopy.DirectoryName
-        $DirName=$listCopy.Directory.Name
-
-        $F1
-        $F2
-        # $DirFullName
+    # 修復路徑
+    $FilePath = $FilePath.TrimEnd('\')
+    $TempPath = $TempPath.TrimEnd('\')
+    ########################### 控制項目 ###########################
+    # 排外檔案
+    $ExcludeFile = @("*.java", "*.class")
+    # 資料夾名稱
+    $MainDirName = $FilePath.Substring($FilePath.LastIndexof("\")+1)
+    # 獲取複製項目相對路徑
+    $ExcludeItem = Get-ChildItem -Path $FilePath `
+                        -Recurse -Exclude $ExcludeFile -File -Name | Sort-Object
+    ###############################################################
+    if (Test-Path -Path $MainDirName) {
+        Write-Output "目錄已經存在，請清除後重新執行"
+        return
     }
-
+    for ($i = 0; $i -lt $ExcludeItem.Count; $i++) {
+        $F1=$FilePath+"\"+$ExcludeItem[$i]
+        $F2=$TempPath+"\"+$MainDirName+"\"+$ExcludeItem[$i]
+        $Dir2=$F2.Substring(0, $F2.LastIndexOf('\'))
+        if ($DontPreview) {      # 複製檔案
+            New-Item -ItemType File -Path $F2 -Force | Out-Null
+            Copy-Item $F1 $F2
+        } else {                 # 預覽路徑
+            Write-Output "From: $F1"
+            Write-Output "To  : $F2"
+            Write-Output ""
+        }
+    }
+    
 }
 
 # 轉換FilePath目錄下的所有java檔案，到TempPath目錄
 function CovertDirEncoding($FilePath, $TempPath, $go=0) {
     $copyOtherFile=1
+    # 修復路徑
+    $FilePath = $FilePath.TrimEnd('\')
+    $TempPath = $TempPath.TrimEnd('\')
     # 暫存資料夾
     $dirName = "utf8File"
     $srcEncoding = "GBK"
     $dstEncoding = "UTF8"
     #====================================================
     $TempPath = $TempPath+"\"+$dirName
-
+    
     # 資料夾不存在
     if (!(Test-Path -Path $TempPath)) {
         # mkdir $dirName  | Out-Null
@@ -72,14 +91,13 @@ function CovertDirEncoding($FilePath, $TempPath, $go=0) {
         }
     }
 
-
-    if ($copyOtherFile) {
-        CopyFiles $FilePath $TempPath
-    }
+    
 }
 
 # 路徑
 $FilePath = "Z:\SourceCode\28\mystruts"
 $TempPath = $PSScriptRoot
 cd $PSScriptRoot
-CovertDirEncoding $FilePath $TempPath 1
+# CovertDirEncoding $FilePath $TempPath 1
+
+CopyFiles $FilePath $TempPath 1
