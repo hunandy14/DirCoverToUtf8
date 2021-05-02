@@ -6,7 +6,8 @@ function DirCoverToUtf8_CopyFiles {
     )
     ########################### 控制項目 ###########################
     # 排外檔案
-    $ExcludeFile = @("*.java", "*.class")
+    $ExcludeFile = @("*.java", "*.class", ".classpath", 
+        ".mymetadata", ".project", "MANIFEST.MF")
     $ExcludeDir = "\\WebRoot\\WEB-INF\\classes\\|\\.settings\\"
     ###############################################################
     # 修復路徑
@@ -110,7 +111,7 @@ function DirCoverToUtf8 {
                 } else {
                     Write-Output "程序中斷::資料夾已存在（下面方式擇一處理）"
                     Write-Output "    - 加上命令 -Force"
-                    Write-Output "    - 移除 $MainDirName 資料夾"
+                    Write-Output "    - 移除 $MainDirName ] 資料夾"
                     return
                 }
             }
@@ -122,8 +123,9 @@ function DirCoverToUtf8 {
 }
 
 # 路徑
-$FilePath = "Z:\SourceCode\28\struts20150313_2"
+$FilePath = "Z:\SourceCode\30"
 $TempPath = $PSScriptRoot
 cd $PSScriptRoot
+
+DirCoverToUtf8 $FilePath $TempPath -Preview
 DirCoverToUtf8 $FilePath $TempPath
-# DirCoverToUtf8 $FilePath $TempPath -Preview
