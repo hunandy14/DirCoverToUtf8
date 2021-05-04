@@ -23,13 +23,15 @@ function DirCoverToUtf8_CopyFiles {
     for ($i = 0; $i -lt $FileItem.Count; $i++) {
         $F1=$FileItem[$i].FullName
         $F2=$TempPath+"\"+$MainDirName+$F1.Substring($FilePath.Length)
-        # $Dir2=$F2 | Split-Path
+        $Dir2=$F2 | Split-Path
         if ($Preview) {
             Write-Output "CopyFiles::預覽"
             Write-Output "  From: $F1"
             Write-Output "  To  : $F2"
+            # Write-Output "  Dir : $Dir2"
         } else {
-            New-Item -ItemType File -Path $F2 -Force | Out-Null
+            if (!(Test-Path $Dir2)) {mkdir $Dir2 | Out-Null}
+            # New-Item -ItemType File -Path $F2 -Force | Out-Null
             Copy-Item $F1 $F2
         }
     }
@@ -61,13 +63,15 @@ function DirCoverToUtf8_CoverFiles {
     for ($i = 0; $i -lt $FileItem.Count; $i++) {
         $F1=$FileItem[$i].FullName
         $F2=$TempPath+"\"+$MainDirName+$F1.Substring($FilePath.Length)
-        # $Dir2=$F2 | Split-Path
+        $Dir2=$F2 | Split-Path
         if ($Preview) {
             Write-Output "CoverFiles::預覽 [$En1 --> $En2]"
             Write-Output "  From: $F1"
             Write-Output "  To  : $F2"
+            # Write-Output "  Dir : $Dir2"
         } else {
-            New-Item -ItemType File -Path $F2 -Force | Out-Null
+            if (!(Test-Path $Dir2)) {mkdir $Dir2 | Out-Null}
+            # New-Item -ItemType File -Path $F2 -Force | Out-Null
             $ct = (Get-Content -Encoding $En1 $F1)
             $ct | Out-File -Encoding $En2 -FilePath $F2
         }
@@ -123,7 +127,7 @@ function DirCoverToUtf8 {
 }
 
 # 路徑
-$FilePath = "Z:\SourceCode\30"
+$FilePath = "Z:\SourceCode\31"
 $TempPath = $PSScriptRoot
 cd $PSScriptRoot
 
