@@ -1,16 +1,21 @@
 class CoverEncode {
     [string]$srcEncode
     [string]$dstEncode
-    [System.Object]$FilterFile = @("*.*", "*.*")
+    [System.Object]$Filter = @("*.*", "*.*")
     # Constructor
     CoverEncode($srcEncode, $dstEncode){
         $this.srcEncode=$srcEncode
         $this.dstEncode=$dstEncode
     }
+    CoverEncode($srcEncode, $dstEncode, $Filter){
+        $this.srcEncode=$srcEncode
+        $this.dstEncode=$dstEncode
+        $this.Filter=$Filter
+    }
     # フォルダのリストを獲得
     [System.Object]getFoldList($srcFold, $dstFold) {
         $FileItem =  Get-ChildItem -Path $srcFold.TrimEnd('\') `
-                        -Recurse -Include $this.FilterFile | Sort-Object
+                        -Recurse -Include $this.Filter | Sort-Object
         return $FileItem
     }
     # ファイルのエンコードの変換
@@ -24,14 +29,12 @@ class CoverEncode {
         $FileItem = $this.getFoldList($srcFold, $dstFold)
         $srcFold = $srcFold.TrimEnd('\')
         $MainDirName = $srcFold.Substring($srcFold.LastIndexof("\")+1)
+        Write-Warning ("CoverFiles:: [" +$this.srcEncode+ " --> " +$this.dstEncode+ "]")
         for ($i = 0; $i -lt $FileItem.Count; $i++) {
             $F1=$FileItem[$i].FullName
             $F2=$dstFold.TrimEnd('\')+"\"+$MainDirName+$F1.Substring($srcFold.Length)
-            $En1=$this.srcEncode
-            $En2=$this.dstEncode
-            # Write-Warning "CoverFiles:: [$En1 --> $En2]"
-            # Write-Warning "  From: $F1"
-            # Write-Warning "  To  : $F2"
+            Write-Warning "  From: $F1"
+            Write-Warning "  To  : $F2"
             $this.EncodChange($F1, $F2)
         }
     }
@@ -46,6 +49,6 @@ class CoverEncode {
 $conver = [CoverEncode]::new('Shift-JIS', 'UTF8')
 $conver.EncodChangeDir("$PSScriptRoot\JIS_File")
 # UTF8　-＞　Shift-JIS
-$conver = [CoverEncode]::new('UTF8', 'Shift-JIS')
+$conver = [CoverEncode]::new('UTF8', 'Shift-JIS', @("*.txt"))
 $conver.EncodChangeDir("$PSScriptRoot\UTF8_File")
 # ==============================================================================
