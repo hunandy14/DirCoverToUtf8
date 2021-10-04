@@ -13,9 +13,8 @@ class cvEncode {
         $this.Filter=$Filter
     }
     # フォルダのリストを獲得
-    [System.Object]getFoldList($srcFold, $dstFold) {
-        $fileItem =  Get-ChildItem -Path $srcFold.TrimEnd('\') `
-                        -Recurse -Include $this.Filter | Sort-Object
+    [System.Object]getFoldList($srcFold) {
+        $fileItem =  dir $srcFold.TrimEnd('\') -R -I $this.Filter
         return $fileItem
     }
     # ファイルのエンコードの変換
@@ -26,24 +25,24 @@ class cvEncode {
     }
     [Void]convert($srcFile) {
         $dstFile = $srcFile.Substring($srcFile.LastIndexOf("\"))
-        $this.convert($srcFile, ("$PSScriptRoot\Output\"+$dstFile))
+        $this.convert($srcFile, ("Output\"+$dstFile))
     }
     # フォルダのエンコードの変換
     [Void]convertDir($srcFold, $dstFold){
-        $fileItem = $this.getFoldList($srcFold, $dstFold)
+        $fileItem = $this.getFoldList($srcFold)
         $srcFold = $srcFold.TrimEnd('\')
         $dirName = $srcFold.Substring($srcFold.LastIndexof("\")+1)
         Write-Warning ("Convert Files:: [" +$this.srcEncode+ " --> " +$this.dstEncode+ "]")
         for ($i = 0; $i -lt $fileItem.Count; $i++) {
             $F1=$fileItem[$i].FullName
-            $F2=$dstFold.TrimEnd('\')+"\"+$dirName+$F1.Substring($srcFold.Length)
+            $F2=$dstFold.TrimEnd('\')+"\"+$dirName+"\"+$fileItem[$i].Name
             Write-Warning "  From: $F1"
             Write-Warning "  └─To: $F2"
             $this.convert($F1, $F2)
         }
     }
     [Void]convertDir($srcFold){
-        $this.convertDir($srcFold, ("$PSScriptRoot\Output\" + $this.dstEncode))
+        $this.convertDir($srcFold, ("Output"))
     }
 }
 # ==============================================================================
@@ -51,8 +50,10 @@ class cvEncode {
 # ==============================================================================
 # Shift-JIS　-＞　UTF8
 $cvEnc = [cvEncode]::new('Shift-JIS', 'UTF8')
-$cvEnc.convert("$PSScriptRoot\JIS_File\B.md", "$PSScriptRoot\Output\convertTest.txt")
+$cvEnc.convert("JIS_File\A.txt")
+# $cvEnc.convert("JIS_File\B.md", "$PSScriptRoot\Output\convertTest2.md")
 # UTF8　-＞　Shift-JIS
-$cvEnc = [cvEncode]::new('UTF8', 'Shift-JIS', @("*.txt"))
-$cvEnc.convertDir("$PSScriptRoot\UTF8_File", "$PSScriptRoot\Output\convertDirTest")
+$cvEnc = [cvEncode]::new('UTF8', 'Shift-JIS', @("*.*"))
+$cvEnc.convertDir("UTF8_File")
+# $cvEnc.convertDir("UTF8_File", "$PSScriptRoot\Output")
 # ==============================================================================
