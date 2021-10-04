@@ -4,7 +4,7 @@ Param(
     [String]$dstEnc,
     [String]$srcPath,
     [String]$dstPath, 
-    [String]$Filter
+    [System.Object]$Filter
 )
 # =========================
 class cvEncode {
@@ -56,18 +56,10 @@ class cvEncode {
 # ==============================================================================
 # プログラム開始
 # ==============================================================================
-# .\cvEncode.ps1 Shift-JIS utf8 dir\Shift-JIS.txt utf8.txt
-$srcEnc = 'Shift-JIS'
-$dstEnc = 'utf8'
-$srcPath = 'dir\Shift-JIS.txt'
-$srcPath = 'dir'
-$dstPath = 'utf8.txt'
-$dstPath = 'Output'
-if ([System.IO.Directory]::Exists($srcPath)) {
-    "dir Go"
-    [cvEncode]::new($srcEnc, $dstEnc, @("*.*")).convertDir($srcPath, $dstPath)
-}if ([system.IO.File]::Exists($srcPath)) {
-    "File Go"
+# $Filter = @("*.*", "*.*")
+if (Test-Path -pathtype Container ($srcPath)) {
+    [cvEncode]::new($srcEnc, $dstEnc, $Filter).convertDir($srcPath, $dstPath)
+}if (Test-Path -pathtype Leaf ($srcPath)) {
     [cvEncode]::new($srcEnc, $dstEnc).convert($srcPath, $dstPath)
 }
 # ==============================================================================
