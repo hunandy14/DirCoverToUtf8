@@ -47,12 +47,15 @@ class cvEncode {
 # ==============================================================================
 # プログラム開始
 # ==============================================================================
-# Shift-JIS　-＞　UTF8
-$cvEnc = [cvEncode]::new('Shift-JIS', 'UTF8')
-$cvEnc.convert("JIS_File\A.txt")
-# $cvEnc.convert("JIS_File\B.md", "Output\convertTest2.md")
-# UTF8　-＞　Shift-JIS
-$cvEnc = [cvEncode]::new('UTF8', 'Shift-JIS', @("*.*"))
-$cvEnc.convertDir("UTF8_File")
-# $cvEnc.convertDir("UTF8_File", "Output")
+function __main__ {
+    ############### Shift-JIS　-＞　UTF8 ###############
+    $cvEnc = [cvEncode]::new('Shift-JIS', 'UTF8')
+    $cvEnc.convert("JIS_File\A.txt")
+    # $cvEnc.convert("JIS_File\B.md", "Output\convertTest2.md")
+    ############### UTF8　-＞　Shift-JIS ###############
+    $cvEnc = [cvEncode]::new('UTF8', 'Shift-JIS', @("*.*"))
+    $cvEnc.convertDir("UTF8_File")
+    # $cvEnc.convertDir("UTF8_File", "Output")
+} 
+# __main__
 # ==============================================================================
