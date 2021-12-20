@@ -12,36 +12,40 @@ class cvEncode {
         $this.dstEnc=$dstEnc
         $this.Filter=$Filter
     }
-    # フォルダのリストを獲得
-    [System.Object]getFoldList($srcPath) {
-        return (dir $srcPath.TrimEnd('\') -R -I $this.Filter)
-    }
     # ファイルのエンコードの変換
-    [Void]convert($srcPath, $dstPath) {
-        New-Item -ItemType File -Path $dstPath -Force | Out-Null
-        $ct = Get-Content -Encoding $this.srcEnc $srcPath
-        $ct | Out-File -Encoding $this.dstEnc -FilePath $dstPath
+    [Void]convert($srcFile, $dstFile) {
+        New-Item -ItemType File -Path $dstFile -Force | Out-Null
+        $ct = Get-Content -Encoding $this.srcEnc $srcFile
+        $ct | Out-File -Encoding $this.dstEnc -FilePath $dstFile
     }
-    [Void]convert($srcPath) {
-        $dstPath = $srcPath.Substring($srcPath.LastIndexOf("\"))
-        $this.convert($srcPath, ("Output\"+$dstPath))
+    [Void]convert($srcFile) {
+        if ($PSScriptRoot) { $curDir = $PSScriptRoot } else { $curDir = (Get-Location).Path }
+        $FileName = (Get-Item $srcFile).Name
+        $this.convert($srcFile, ("cvEncode_OUT\"+$FileName))
     }
     # フォルダのエンコードの変換
     [Void]convertDir($srcPath, $dstPath){
-        $fileItem = $this.getFoldList($srcPath)
-        $srcPath = $srcPath.TrimEnd('\')
-        $dirName = $srcPath.Substring($srcPath.LastIndexof("\")+1)
-        Write-Warning ("Convert Files:: [" +$this.srcEnc+ " --> " +$this.dstEnc+ "]")
-        for ($i = 0; $i -lt $fileItem.Count; $i++) {
-            $F1=$fileItem[$i].FullName
-            $F2=$dstPath.TrimEnd('\')+"\"+$dirName+"\"+$fileItem[$i].Name
-            Write-Warning "  From: $F1"
-            Write-Warning "  └─To: $F2"
+        if ($PSScriptRoot) { $curDir = $PSScriptRoot } else { $curDir = (Get-Location).Path }
+        $srcPath = (Resolve-Path $srcPath).Path
+        $dstPath.TrimEnd('\') -replace("\/", "\")
+        Set-Location $srcPath
+        $Item = Get-ChildItem $srcPath -R -I $this.Filter
+        Write-Host $Item[0]
+        Write-Host ("Convert Files:: [" +$this.srcEnc+ " --> " +$this.dstEnc+ "]")
+        for ($i = 0; $i -lt $Item.Count; $i++) {
+            $F1=$Item[$i].FullName
+            $Relative = ($F1 | Resolve-Path -Relative) -replace("\.\\", "")
+            $F2=$dstPath.TrimEnd('\') + "\$Relative"
+            Write-Host "  From: " -NoNewline
+            Write-Host "$F1" -ForegroundColor:White
+            Write-Host "  └─To: " -NoNewline
+            Write-Host "$F2" -ForegroundColor:Yellow
             $this.convert($F1, $F2)
         }
+        Set-Location $curDir
     }
     [Void]convertDir($srcPath){
-        $this.convertDir($srcPath, "Output")
+        $this.convertDir($srcPath, "cvEncode_OUT")
     }
 }
 # ==============================================================================
@@ -49,13 +53,15 @@ class cvEncode {
 # ==============================================================================
 function __main__ {
     ############### Shift-JIS　-＞　UTF8 ###############
-    $cvEnc = [cvEncode]::new('Shift-JIS', 'UTF8')
-    $cvEnc.convert("JIS_File\A.txt")
-    # $cvEnc.convert("JIS_File\B.md", "Output\convertTest2.md")
+    # $cvEnc = [cvEncode]::new('Shift-JIS', 'UTF8')
+    # $cvEnc = [cvEncode]::new('UTF8', 'Shift-JIS')
+    # $cvEnc.convert("DirCoverToUtf8.ps1")
     ############### UTF8　-＞　Shift-JIS ###############
-    $cvEnc = [cvEncode]::new('UTF8', 'Shift-JIS', @("*.*"))
-    $cvEnc.convertDir("UTF8_File")
-    # $cvEnc.convertDir("UTF8_File", "Output")
+    # $cvEnc = [cvEncode]::new('UTF8', 'Shift-JIS', @("*.*"))
+    $cvEnc = [cvEncode]::new('Shift-JIS', 'UTF8', @("*.*"))
+    $srcDir = "Z:\Work\doc_1130\source_before"
+    $dstDir = "Z:\Work\cvEncode\doc_1130"
+    $cvEnc.convertDir($srcDir, $dstDir)
 } 
 # __main__
 # ==============================================================================
