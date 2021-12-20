@@ -30,7 +30,6 @@ class cvEncode {
         $dstPath.TrimEnd('\') -replace("\/", "\")
         Set-Location $srcPath
         $collection = Get-ChildItem $srcPath -R -I $this.Filter
-        Write-Host $Item[0]
         Write-Host ("Convert Files:: [" +$this.srcEnc+ " --> " +$this.dstEnc+ "]")
         
         foreach ($item in $collection) {
@@ -38,7 +37,7 @@ class cvEncode {
             $Relative = ($F1 | Resolve-Path -Relative) -replace("\.\\", "")
             $F2=$dstPath.TrimEnd('\') + "\$Relative"
             Write-Host "  From: " -NoNewline
-            Write-Host "$F1" -ForegroundColor:White
+            Write-Host "$Relative" -ForegroundColor:White
             Write-Host "  └─To: " -NoNewline
             Write-Host "$F2" -ForegroundColor:Yellow
             $this.convert($F1, $F2)
