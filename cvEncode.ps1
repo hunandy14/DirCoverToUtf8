@@ -29,11 +29,12 @@ class cvEncode {
         $srcPath = (Resolve-Path $srcPath).Path
         $dstPath.TrimEnd('\') -replace("\/", "\")
         Set-Location $srcPath
-        $Item = Get-ChildItem $srcPath -R -I $this.Filter
+        $collection = Get-ChildItem $srcPath -R -I $this.Filter
         Write-Host $Item[0]
         Write-Host ("Convert Files:: [" +$this.srcEnc+ " --> " +$this.dstEnc+ "]")
-        for ($i = 0; $i -lt $Item.Count; $i++) {
-            $F1=$Item[$i].FullName
+        
+        foreach ($item in $collection) {
+            $F1=$item.FullName
             $Relative = ($F1 | Resolve-Path -Relative) -replace("\.\\", "")
             $F2=$dstPath.TrimEnd('\') + "\$Relative"
             Write-Host "  From: " -NoNewline
