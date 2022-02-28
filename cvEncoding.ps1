@@ -1,4 +1,4 @@
-function FileTrim {
+function TrimFile {
     param (
         [System.Object] $Content,
         [string] $str = " |`t"
@@ -19,38 +19,34 @@ function ReadContent {
         [Parameter(Position = 2, ParameterSetName = "B")]
         [switch] $DefaultEncoding
     )
-    # ±qºÞ¹D¿é¤J
+    # å¾žç®¡é“è¼¸å…¥
     if ($InputObject) { $Content = $InputObject }
-    # ÀË¬dÀÉ®×
+    # æª¢æŸ¥æª”æ¡ˆ
     if (!(Test-Path $Path -PathType:Leaf)) {
-        Write-Error "¸ô®|¤£¦s¦b"
+        Write-Error "è·¯å¾‘ä¸å­˜åœ¨"
         return
     }
     
-    # Àò¨ú½s½X
-    if ($DefaultEncoding) {
-        # ¨Ï¥Î·í«e¨t²Î½s½X
+    # ç²å–ç·¨ç¢¼
+    if ($DefaultEncoding) { # ä½¿ç”¨ç•¶å‰ç³»çµ±ç·¨ç¢¼
         $Enc = [Text.Encoding]::Default
-    }
-    elseif ((!$Encoding) ) {
-        # §¹¥þ¤£«ü©w¹w³]¹w³]URF8
+    } elseif ((!$Encoding) ) { # å®Œå…¨ä¸æŒ‡å®šé è¨­
+        # $Enc = New-Object System.Text.UTF8Encoding $False
+        $Enc = [Text.Encoding]::Default
+    } elseif ($Encoding -eq 65001) { # æŒ‡å®šUTF8
         $Enc = New-Object System.Text.UTF8Encoding $False
-    }
-    elseif ($Encoding -eq 65001) {
-        # «ü©wUTF8
-        $Enc = New-Object System.Text.UTF8Encoding $False
-    }
-    else {
-        # ¨Ï¥ÎªÌ«ü©w
+    } else { # ä½¿ç”¨è€…æŒ‡å®š
         $Enc = [Text.Encoding]::GetEncoding($Encoding)
     }
     
-    # Åª¨úÀÉ®×
+    # è®€å–æª”æ¡ˆ
     $Content = [System.IO.File]::ReadAllLines($Path, $Enc)
     return $Content
 }
 # ReadContent "Encoding_SHIFT.txt" 932
-# ReadContent "Encoding_UTF8.txt"
+# (ReadContent "Encoding_UTF8.txt" 65001)
+# TrimFile (ReadContent "Encoding_UTF8.txt" 65001)
+# return
 
 function WriteContent {
     [CmdletBinding(DefaultParameterSetName = "D")]
@@ -70,85 +66,114 @@ function WriteContent {
         [System.Object] $InputObject
     )
     BEGIN {
-        $Idx = 0
-        $Count = 0
-        # ±qºÞ¹D¿é¤J
+        # å¾žç®¡é“è¼¸å…¥
         if ($InputObject) {
             Write-Host "intput==="$InputObject
             $Content = $InputObject
         }
         
-        # Àò¨ú½s½X
-        if ($DefaultEncoding) {
-            # ¨Ï¥Î·í«e¨t²Î½s½X
+        # ç²å–ç·¨ç¢¼
+        if ($DefaultEncoding) { # ä½¿ç”¨ç•¶å‰ç³»çµ±ç·¨ç¢¼
             $Enc = [Text.Encoding]::Default
-        }
-        elseif ((!$Encoding) ) {
-            # §¹¥þ¤£«ü©w¹w³]¹w³]URF8
+        } elseif ((!$Encoding) ) { # å®Œå…¨ä¸æŒ‡å®šé è¨­
             $Enc = New-Object System.Text.UTF8Encoding $False
-        }
-        elseif ($Encoding -eq 65001) {
-            # «ü©wUTF8
+            # $Enc = [Text.Encoding]::Default
+        } elseif ($Encoding -eq 65001) { # æŒ‡å®šUTF8
             $Enc = New-Object System.Text.UTF8Encoding $False
-        }
-        else {
-            # ¨Ï¥ÎªÌ«ü©w
+        } else { # ä½¿ç”¨è€…æŒ‡å®š
             $Enc = [Text.Encoding]::GetEncoding($Encoding)
         }
         
-        # «Ø¥ßÀÉ®×
-        if (!$Append) {
-            (New-Item $Path -ItemType:File -Force) | Out-Null
-        }
+        # å»ºç«‹æª”æ¡ˆ
+        if (!$Append) { (New-Item $Path -ItemType:File -Force) | Out-Null }
     } process{
-        # ¼g¤JÀÉ®×
-        if($Idx -eq 0){
-            [System.IO.File]::AppendAllText($Path, "$_", $Enc);
-        } else {
-            [System.IO.File]::AppendAllText($Path, "`n$_", $Enc);
-        } $Idx++
+        
+        [System.IO.File]::AppendAllText($Path, "$_`n", $Enc);
     }
-    END {
-        # [System.IO.File]::AppendAllText($Path, "`n", $Enc);
-        Write-Host "³Ì«á¤@¦æ==[$Idx][$_]"
-        if ($_ -eq "") {
-        }
-    }
+    END { }
 }
-# $Content = "º~¦r"
-# $Content|WriteContent "Out.txt" -DefaultEncoding
-# $Content|WriteContent "Out.txt" 65001
-# $Content|WriteContent "Out.txt"
-
-# (ReadContent "Encoding_SHIFT.txt" 932)|WriteContent "Out.txt" 65001
-
-# ¦UºØ½s½XÅª¼g½d¨Ò
-# (ReadContent "Encoding_UTF8.txt")|WriteContent "Out_BIG5.txt" 950
-# (ReadContent "0.txt")|WriteContent "Out_BIG5.txt" 950
-# (ReadContent "2.txt").Count
-# (ReadContent "1.txt")|WriteContent "Out_BIG5.txt" 950
-
-# $Enc1 = [Text.Encoding]::GetEncoding(65001)
-# $Enc2 = New-Object System.Text.UTF8Encoding $False
-# (Get-Content "1.txt" -Encoding:UTF8)
-
-$str = [System.IO.File]::ReadLines("0.txt")
-# $str
-
-$str.Length
-
-# (ReadContent "2.txt")|WriteContent "Out_BIG5.txt" 950
+# å„ç¨®ç·¨ç¢¼è®€å¯«ç¯„ä¾‹
 # (ReadContent "Encoding_BIG5.txt" 950)|WriteContent "Out_BIG5.txt" 950
 # (ReadContent "Encoding_UTF8.txt")|WriteContent "Out_BIG5.txt" 950
+# (ReadContent "Encoding_BIG5.txt" -Def)|WriteContent "Out.txt"
 
-# function cvEncode{
-#     param (
-#         $scrPath,
-#         $dstPath
-#     )
-#     $Content = Get-Content $scrPath -Encoding:Default
-#     $Encode = New-Object System.Text.UTF8Encoding $False
-#     New-Item -ItemType File -Path $dstPath -Force | Out-Null
-#     [System.IO.File]::WriteAllLines($dstPath, $Content, $Encode)
-# }
-# cvEncodeToUTF8 Encode_Default.txt Encode_UTF8.txt
+function cvEnc{
+    param (
+        [Parameter(Position = 0, ParameterSetName = "", Mandatory=$true)]
+        [string] $srcPath,
+        [Parameter(Position = 1, ParameterSetName = "", Mandatory=$true)]
+        [string] $dstPath,
+        [Parameter(Position = 2, ParameterSetName = "")]
+        [int] $srcEnc = [Text.Encoding]::Default.CodePage,
+        [Parameter(Position = 3, ParameterSetName = "")]
+        [int] $dstEnc = 65001,
+        [Parameter(ParameterSetName = "")]
+        [System.Object] $Filter = @("*.*"),
+        [Parameter(ParameterSetName = "")]
+        [switch] $Preview,
+        [Parameter(ParameterSetName = "")]
+        [switch] $TrimFile
+    )
+    # ç²å–ç•¶å‰ä½ç½®
+    if ($PSScriptRoot) { $curDir = $PSScriptRoot } else { $curDir = (Get-Location).Path }
+    # ç·¨ç¢¼åç¨±
+    $srcEncName = [Text.Encoding]::GetEncoding($srcEnc).WebName
+    $dstEncName = [Text.Encoding]::GetEncoding($dstEnc).WebName
+    if (!$srcEncName -or !$dstEncName) { Write-Error "[éŒ¯èª¤]:: ç·¨ç¢¼è¼¸å…¥æœ‰èª¤ï¼Œæª¢æŸ¥æ˜¯å¦æ‰“éŒ¯è™Ÿç¢¼äº†" }
+    # æª”æ¡ˆä¾†æº
+    Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
+    if (Test-Path $srcPath -PathType:Leaf) {
+        if (Test-Path $dstPath -PathType:Container){
+            Write-Error "[éŒ¯èª¤]:: `$dstPath=$dstPath æ˜¯è³‡æ–™å¤¾ï¼Œå¿…é ˆç‚ºæª”æ¡ˆæˆ–ç©ºè·¯å¾‘"
+            return
+        }
+        $item = Get-Item $srcPath
+        $F1=$item.FullName
+        $Relative = $F1
+        $F2=$dstPath
+        Write-Host "  From: " -NoNewline
+        Write-Host "$Relative" -ForegroundColor:White
+        Write-Host "  â””â”€To: " -NoNewline
+        Write-Host "$F2" -ForegroundColor:Yellow
+        $Content = (ReadContent $F1 $srcEnc)
+        if ($TrimFile) { $Content = (TrimFile $Content) }
+        if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
+        return
+    } elseif (Test-Path $srcPath -PathType:Container) {
+        if (Test-Path $dstPath -PathType:Leaf){
+            Write-Error "[éŒ¯èª¤]:: `$dstPath=$dstPath æ˜¯æª”æ¡ˆï¼Œå¿…é ˆç‚ºè³‡æ–™å¤¾æˆ–ç©ºè·¯å¾‘"
+            return
+        }
+        Set-Location $srcPath
+        $collection = Get-ChildItem $srcPath -Recurse -Include:$Filter
+        foreach ($item in $collection) {
+            $F1=$item.FullName
+            $Relative = ($F1 | Resolve-Path -Relative) -replace("\.\\", "")
+            $F2=$dstPath.TrimEnd('\') + "\$Relative"
+            Write-Host "  From: " -NoNewline
+            Write-Host "$Relative" -ForegroundColor:White
+            Write-Host "  â””â”€To: " -NoNewline
+            Write-Host "$F2" -ForegroundColor:Yellow
+            Write-Host ("Convert Files:: [" +$srcEnc+ " --> " +$dstEnc+ "]")
+            $Content = (ReadContent $F1 $srcEnc)
+            if ($TrimFile) { $Content = TrimFile $Content }
+            if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
+        }
+        Set-Location $curDir
+        return
+    }
+}
+
+# $path1 = "Z:\Work_Hita\doc_1130\source_after\js"
+# $path1 = "Z:\Work_Hita\doc_1130\source_after\js\DMWA0010.js"
+# $path2 = "Z:\cvEncoding"
+# $path2 = "Z:\cvEncoding\DMWA0010.js"
+# cvEnc $path1 $path2 932
+#
+# $path1 = "Z:\Work_Hita\doc_1130\source_after"
+# $path2 = "Z:\cvEncoding"
+# cvEnc $path1 $path2 932
+#
+# $path1 = "Z:\Work_Hita\doc_1130\source_after\js\DMWA0010-2.js"
+# $path2 = "Z:\cvEncoding\DMWA0010-2.js"
+# cvEnc $path1 $path2 932 -TrimFile
