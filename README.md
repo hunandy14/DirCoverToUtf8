@@ -26,3 +26,12 @@ irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932 -TrimFile
 # 僅輸出js與css檔案
 irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932 -Filter:@("*.css", "*.js")
 ```
+
+cmd用法
+
+```bat
+SET path1="Z:\Work_Hita\doc_1130\source_after\js\DMWA0010.js"
+SET path2="Z:\cvEncoding\DMWA0010.js"
+powershell -c "irm bit.ly/3pkjAtp|iex; cvEnc %path1% %path2% 932"
+
+```
