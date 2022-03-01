@@ -154,11 +154,11 @@ function cvEnc{
             Write-Host "$Relative" -ForegroundColor:White
             Write-Host "  └─To: " -NoNewline
             Write-Host "$F2" -ForegroundColor:Yellow
-            Write-Host ("Convert Files:: [" +$srcEnc+ " --> " +$dstEnc+ "]")
             $Content = (ReadContent $F1 $srcEnc)
             if ($TrimFile) { $Content = TrimFile $Content }
             if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
         }
+        Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
         Set-Location $curDir
         return
     }
