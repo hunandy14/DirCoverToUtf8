@@ -119,12 +119,12 @@ function cvEnc{
     # 編碼名稱
     $srcEncName = [Text.Encoding]::GetEncoding($srcEnc).WebName
     $dstEncName = [Text.Encoding]::GetEncoding($dstEnc).WebName
-    if (!$srcEncName -or !$dstEncName) { Write-Error "[錯誤]:: 編碼輸入有誤，檢查是否打錯號碼了" }
+    if (!$srcEncName -or !$dstEncName) { Write-Error "[錯誤]:: 編碼輸入有誤, 檢查是否打錯號碼了" }
     # 檔案來源
     Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
     if (Test-Path $srcPath -PathType:Leaf) {
         if (Test-Path $dstPath -PathType:Container){
-            Write-Error "[錯誤]:: `$dstPath=$dstPath 是資料夾，必須為檔案或空路徑"
+            Write-Error "[錯誤]:: `$dstPath=$dstPath 是資料夾, 必須為檔案或空路徑"
             return
         }
         $item = Get-Item $srcPath
@@ -141,7 +141,7 @@ function cvEnc{
         return
     } elseif (Test-Path $srcPath -PathType:Container) {
         if (Test-Path $dstPath -PathType:Leaf){
-            Write-Error "[錯誤]:: `$dstPath=$dstPath 是檔案，必須為資料夾或空路徑"
+            Write-Error "[錯誤]:: `$dstPath=$dstPath 是檔案, 必須為資料夾或空路徑"
             return
         }
         Set-Location $srcPath
