@@ -98,14 +98,17 @@ function WriteContent {
 # (ReadContent "enc\Encoding_BIG5.txt" -Def)|WriteContent "Out.txt"
 
 function cvEnc{
+    [CmdletBinding(DefaultParameterSetName = "A")]
     param (
-        [Parameter(Position = 0, ParameterSetName = "", Mandatory=$true)]
+        [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
         [string] $srcPath,
-        [Parameter(Position = 1, ParameterSetName = "", Mandatory=$true)]
+        [Parameter(Position = 1, ParameterSetName = "A")]
         [string] $dstPath,
-        [Parameter(Position = 2, ParameterSetName = "")]
+        [Parameter(Position = 2, ParameterSetName = "A")]
+        [Parameter(Position = 1, ParameterSetName = "B")]
         [int] $srcEnc = [Text.Encoding]::Default.CodePage,
-        [Parameter(Position = 3, ParameterSetName = "")]
+        [Parameter(Position = 3, ParameterSetName = "A")]
+        [Parameter(Position = 2, ParameterSetName = "B")]
         [int] $dstEnc = 65001,
         [Parameter(ParameterSetName = "")]
         [System.Object] $Filter = @("*.*"),
@@ -116,6 +119,14 @@ function cvEnc{
     )
     # 獲取當前位置
     if ($PSScriptRoot) { $curDir = $PSScriptRoot } else { $curDir = (Get-Location).Path }
+    # 輸出位置為空時自動指定到暫存目錄
+    if (!$dstPath) {
+        $OutTemp = $true
+        $dstPath = "$($env:TEMP)\cvEncode"
+        if (Test-Path "$($env:TEMP)\cvEncode" -PathType:Container) {
+            Move-Item -Path $dstPath "$($env:TEMP)\cvEncode2" -Force -ErrorAction:Stop
+        }
+    }
     # 編碼名稱
     $srcEncName = [Text.Encoding]::GetEncoding($srcEnc).WebName
     $dstEncName = [Text.Encoding]::GetEncoding($dstEnc).WebName
@@ -124,6 +135,7 @@ function cvEnc{
     Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
 
     if (Test-Path $srcPath -PathType:Leaf) { # 輸入的路徑為檔案
+        if ($OutTemp) { $dstPath = "$dstPath\" + (Get-Item $srcPath).Name }
         if (Test-Path $dstPath -PathType:Container){
             Write-Error "[錯誤]:: `$dstPath=$dstPath 是資料夾, 必須為檔案或空路徑"
             return
@@ -139,6 +151,7 @@ function cvEnc{
         $Content = (ReadContent $F1 $srcEnc)
         if ($TrimFile) { $Content = (TrimFile $Content) }
         if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
+        if ($OutTemp) { explorer $dstPath }
         return
     } elseif (Test-Path $srcPath -PathType:Container) { # 輸入的路徑為資料夾
         if (Test-Path $dstPath -PathType:Leaf){
@@ -164,6 +177,7 @@ function cvEnc{
             if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
         }
         Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
+        if ($OutTemp) { explorer $dstPath }
         return
     }
     else {
@@ -191,4 +205,8 @@ function cvEnc{
     # $path2 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\out.txt"
     # cvEnc $path1 $path2 932
     # cvEnc $path1 $path2 932 -TrimFile
+    # 
+    # 空路徑自動指定到暫存目錄
+    # cvEnc ".\enc\932\kyouto.txt" 932
+    # cvEnc ".\enc\932" 932
 # } __Test_cvEnc__
