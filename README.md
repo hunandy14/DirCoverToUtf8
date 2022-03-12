@@ -10,7 +10,7 @@ PowerShell 檔案編碼轉換器
 - @param -TrimFile : 消除行末空白與結尾多餘換行
 - @param -Filter   : 僅轉換特定副檔名的檔案
 
-#### 查詢編碼代碼
+#### 查詢編碼代號
 
 ```sh
 [Text.Encoding]::GetEncoding('GB2312')
