@@ -1,37 +1,48 @@
 檔案編碼轉換器
 ===
 
-懶人包封裝後的 API
+API使用說明
+- @param 1 : 輸入路徑(自動判別目錄或檔案)
+- @param 2 : 輸出路徑(自動判別目錄或檔案)
+- @param 3 : 輸入檔案編碼(省略則為當前系統編碼)
+- @param 4 : 輸出檔案編碼(省略則為UTF8編碼)
 
-- 預設讀取編碼是系統語言，輸出編碼是UTF8
-- 第一個編碼是檔案來源，第二個編碼是輸出
+- @param -TrimFile : 消除行末空白與結尾多餘換行
+- @param -Filter   : 僅轉換特定副檔名的檔案
+
 
 ``` ps1
 # 載入函式
 irm bit.ly/3pkjAtp|iex; 
 
-# 轉換檔案
-$path1 = "Z:\Work_Hita\doc_1130\source_after\js\DMWA0010.js"
-$path2 = "Z:\cvEncoding\DMWA0010.js"
-irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932
+# 設定目錄
+$path1 = ".\enc\932"
+$path2 = ".\out"
+$file1 = ".\enc\932\kyouto.txt"
+$file2 = ".\out.txt"
 
-# 轉換目錄
-$path1 = "Z:\Work_Hita\doc_1130\source_after\js"
-$path2 = "Z:\cvEncoding"
+# 轉換檔案 932 -> UTF8
+irm bit.ly/3pkjAtp|iex;cvEnc $file1 $file2 932
+# 轉換檔案 932 -> big5
+irm bit.ly/3pkjAtp|iex;cvEnc $file1 $file2 932 950
+
+# 轉換目錄 932 -> UTF8
 irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932
+# 轉換目錄 932 -> big5
 irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932 950
 
-# 輸出時順便去除結尾空白與結尾多餘換行
+# 輸出時消除行末空白與結尾多餘換行
 irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932 -TrimFile
-# 僅輸出js與css檔案
-irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932 -Filter:@("*.css", "*.js")
+# 僅輸出txt與md檔案
+irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932 -Filter:@("*.txt", "*.md")
+
 ```
 
 cmd用法
 
 ```bat
-SET path1="Z:\Work_Hita\doc_1130\source_after\js\DMWA0010.js"
-SET path2="Z:\cvEncoding\DMWA0010.js"
+SET path1=".\enc\932"
+SET path2=".\out"
 powershell -c "irm bit.ly/3pkjAtp|iex; cvEnc %path1% %path2% 932"
 
 ```
