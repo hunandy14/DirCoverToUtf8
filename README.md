@@ -13,6 +13,7 @@ PowerShell 檔案編碼轉換器
 #### 查詢編碼代號
 
 ```sh
+# 查詢簡體GB2312的代碼 (936)
 [Text.Encoding]::GetEncoding('GB2312')
 ```
 
