@@ -26,7 +26,7 @@ function ReadContent {
         Write-Error "路徑不存在"
         return
     }
-    
+
     # 獲取編碼
     if ($DefaultEncoding) { # 使用當前系統編碼
         $Enc = [Text.Encoding]::Default
@@ -38,7 +38,7 @@ function ReadContent {
     } else { # 使用者指定
         $Enc = [Text.Encoding]::GetEncoding($Encoding)
     }
-    
+
     # 讀取檔案
     $Content = [System.IO.File]::ReadAllLines($Path, $Enc)
     return $Content
@@ -57,7 +57,7 @@ function WriteContent {
         [int] $Encoding,
         [Parameter(Position = 1, ParameterSetName = "D")]
         [switch] $DefaultEncoding,
-        
+
         [Parameter(ParameterSetName = "")]
         [switch] $NoNewline,
         [Parameter(ParameterSetName = "")]
@@ -71,7 +71,7 @@ function WriteContent {
             Write-Host "intput==="$InputObject
             $Content = $InputObject
         }
-        
+
         # 獲取編碼
         if ($DefaultEncoding) { # 使用當前系統編碼
             $Enc = [Text.Encoding]::Default
@@ -83,11 +83,11 @@ function WriteContent {
         } else { # 使用者指定
             $Enc = [Text.Encoding]::GetEncoding($Encoding)
         }
-        
+
         # 建立檔案
         if (!$Append) { (New-Item $Path -ItemType:File -Force) | Out-Null }
     } process{
-        
+
         [System.IO.File]::AppendAllText($Path, "$_`n", $Enc);
     }
     END { }
@@ -122,20 +122,20 @@ function cvEnc{
     if (!$srcEncName -or !$dstEncName) { Write-Error "[錯誤]:: 編碼輸入有誤, 檢查是否打錯號碼了" }
     # 檔案來源
     Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
-    
+
     if (Test-Path $srcPath -PathType:Leaf) { # 輸入的路徑為檔案
         if (Test-Path $dstPath -PathType:Container){
             Write-Error "[錯誤]:: `$dstPath=$dstPath 是資料夾, 必須為檔案或空路徑"
             return
         }
-        $item = Get-Item $srcPath
-        $F1=$item.FullName
-        $Relative = $F1
-        $F2=$dstPath
+        # 輸出路徑
+        $F1 = (Get-Item $srcPath).FullName
+        $F2 = $dstPath
         Write-Host "  From: " -NoNewline
-        Write-Host "$Relative" -ForegroundColor:White
+        Write-Host "$F1" -ForegroundColor:White
         Write-Host "  └─To: " -NoNewline
         Write-Host "$F2" -ForegroundColor:Yellow
+        # 輸出檔案
         $Content = (ReadContent $F1 $srcEnc)
         if ($TrimFile) { $Content = (TrimFile $Content) }
         if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
@@ -176,20 +176,19 @@ function cvEnc{
     # $path1 = ".\enc\932"
     # $path2 = ".\out"
     # cvEnc $path1 $path2 932
-    # cvEnc $path1 $path2 932 -TrimFile
-    
+    # cvEnc $path1 $path2 932 -TrimFile.
+    # 轉換相對路徑檔案測試
+    # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932
+    # cvEnc ".\enc\Trim.txt" ".\out.txt" 65001 -TrimFile
+    #
     # 轉換絕對路徑資料夾測試
     # $path1 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\enc\932"
     # $path2 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\out"
     # cvEnc $path1 $path2 932
     # cvEnc $path1 $path2 932 -TrimFile
-    
-    # 轉換相對路徑檔案測試
-    # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932
-    # cvEnc ".\enc\Trim.txt" ".\out.txt" 65001 -TrimFile
-    
     # 轉換絕對路徑檔案測試
-    # $path1 = "Z:\Work_Hita\doc_1130\source_after\js\DMWA0010-2.js"
-    # $path2 = "Z:\cvEncoding\DMWA0010-2.js"
+    # $path1 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\enc\932\Trim.txt"
+    # $path2 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\out.txt"
+    # cvEnc $path1 $path2 932
     # cvEnc $path1 $path2 932 -TrimFile
 # } __Test_cvEnc__
