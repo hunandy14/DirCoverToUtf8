@@ -43,9 +43,9 @@ function ReadContent {
     $Content = [System.IO.File]::ReadAllLines($Path, $Enc)
     return $Content
 }
-# ReadContent "Encoding_SHIFT.txt" 932
-# (ReadContent "Encoding_UTF8.txt" 65001)
-# TrimFile (ReadContent "Encoding_UTF8.txt" 65001)
+# ReadContent "enc\Encoding_SHIFT.txt" 932
+# (ReadContent "enc\Encoding_UTF8.txt" 65001)
+# TrimFile (ReadContent "enc\Encoding_UTF8.txt" 65001)
 # return
 
 function WriteContent {
@@ -93,9 +93,9 @@ function WriteContent {
     END { }
 }
 # 各種編碼讀寫範例
-# (ReadContent "Encoding_BIG5.txt" 950)|WriteContent "Out_BIG5.txt" 950
-# (ReadContent "Encoding_UTF8.txt")|WriteContent "Out_BIG5.txt" 950
-# (ReadContent "Encoding_BIG5.txt" -Def)|WriteContent "Out.txt"
+# (ReadContent "enc\Encoding_BIG5.txt" 950)|WriteContent "Out_BIG5.txt" 950
+# (ReadContent "enc\Encoding_UTF8.txt")|WriteContent "Out_BIG5.txt" 950
+# (ReadContent "enc\Encoding_BIG5.txt" -Def)|WriteContent "Out.txt"
 
 function cvEnc{
     param (
