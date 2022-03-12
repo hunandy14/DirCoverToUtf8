@@ -98,17 +98,17 @@ function WriteContent {
 # (ReadContent "enc\Encoding_BIG5.txt" -Def)|WriteContent "Out.txt"
 
 function cvEnc{
-    [CmdletBinding(DefaultParameterSetName = "A")]
+    [CmdletBinding(DefaultParameterSetName = "B")]
     param (
         [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
         [string] $srcPath,
         [Parameter(Position = 1, ParameterSetName = "A")]
         [string] $dstPath,
-        [Parameter(Position = 2, ParameterSetName = "A")]
         [Parameter(Position = 1, ParameterSetName = "B")]
+        [Parameter(Position = 2, ParameterSetName = "A")]
         [int] $srcEnc = [Text.Encoding]::Default.CodePage,
-        [Parameter(Position = 3, ParameterSetName = "A")]
         [Parameter(Position = 2, ParameterSetName = "B")]
+        [Parameter(Position = 3, ParameterSetName = "A")]
         [int] $dstEnc = 65001,
         [Parameter(ParameterSetName = "")]
         [System.Object] $Filter = @("*.*"),
@@ -190,10 +190,10 @@ function cvEnc{
     # $path1 = ".\enc\932"
     # $path2 = ".\out"
     # cvEnc $path1 $path2 932
-    # cvEnc $path1 $path2 932 -TrimFile.
+    # cvEnc $path1 $path2 932 -TrimFile
     # 轉換相對路徑檔案測試
     # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932
-    # cvEnc ".\enc\Trim.txt" ".\out.txt" 65001 -TrimFile
+    cvEnc ".\enc\Trim.txt" ".\out.txt" -TrimFile
     #
     # 轉換絕對路徑資料夾測試
     # $path1 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\enc\932"
@@ -207,6 +207,7 @@ function cvEnc{
     # cvEnc $path1 $path2 932 -TrimFile
     # 
     # 空路徑自動指定到暫存目錄
-    # cvEnc ".\enc\932\kyouto.txt" 932
-    # cvEnc ".\enc\932" 932
+    # cvEnc ".\enc\932\kyouto.txt" 932 65001
+    # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932 
+    # cvEnc ".\enc\932" 932 65001
 # } __Test_cvEnc__

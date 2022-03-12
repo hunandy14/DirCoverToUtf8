@@ -1,4 +1,4 @@
-測試TrimFile行結尾多餘空格與檔案結尾多餘跳行             
+����TrimFile�浲���h�l�Ů�P�ɮ׵����h�l����             
 
 
 
