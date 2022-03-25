@@ -85,9 +85,11 @@ function WriteContent {
         }
 
         # 建立檔案
-        if (!$Append) { (New-Item $Path -ItemType:File -Force) | Out-Null }
+        if (!$Append) { 
+            (New-Item $Path -ItemType:File -Force) | Out-Null
+        } $Path = [System.IO.Path]::GetFullPath($Path)
+        
     } process{
-
         [System.IO.File]::AppendAllText($Path, "$_`n", $Enc);
     }
     END { }
