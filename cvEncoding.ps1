@@ -213,7 +213,7 @@ function cvEnc{
     # cvEnc $path1 $path2 932 -TrimFile
     # 
     # 空路徑自動指定到暫存目錄
-    cvEnc ".\enc\932\kyouto.txt" 932 -Temp
+    # cvEnc ".\enc\932\kyouto.txt" 932 -Temp
     # cvEnc ".\enc\932\kyouto.txt" 932 65001
     # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932 65001
     # cvEnc ".\enc\932" 932 65001
