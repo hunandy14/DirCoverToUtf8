@@ -54,3 +54,21 @@ SET path2=".\out"
 powershell -c "irm bit.ly/3pkjAtp|iex; cvEnc %path1% %path2% 932"
 
 ```
+
+### API 使用範例2
+檔案讀寫
+
+```ps1
+# 載入函式
+irm bit.ly/3pkjAtp|iex; 
+
+# 讀取檔案
+ReadContent "enc\Encoding_UTF8.txt"
+ReadContent "enc\Encoding_BIG5.txt" 950
+
+# 輸出檔案
+$CT="這是中文字編碼BIG5"
+$CT|WriteContent "Out_BIG5.txt"
+$CT|WriteContent "Out_BIG5.txt" 950
+$CT|WriteContent "Out_BIG5.txt" -DefaultEncoding
+```
