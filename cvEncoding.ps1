@@ -30,7 +30,8 @@ function ReadContent {
 
     # 獲取編碼
     if ($DefaultEncoding) { # 使用當前系統編碼
-        $Enc = [Text.Encoding]::Default
+        # $Enc = [Text.Encoding]::Default
+        $Enc = PowerShell.exe -C "& {return [Text.Encoding]::Default}"
     } elseif ((!$Encoding) ) { # 完全不指定預設
         # $Enc = New-Object System.Text.UTF8Encoding $False
         $Enc = [Text.Encoding]::Default
@@ -69,7 +70,8 @@ function WriteContent {
     BEGIN {
         # 獲取編碼
         if ($DefaultEncoding) { # 使用當前系統編碼
-            $Enc = [Text.Encoding]::Default
+            # $Enc = [Text.Encoding]::Default
+            $Enc = PowerShell.exe -C "& {return [Text.Encoding]::Default}"
         } elseif ((!$Encoding) ) { # 完全不指定預設
             $Enc = New-Object System.Text.UTF8Encoding $False
             # $Enc = [Text.Encoding]::Default
