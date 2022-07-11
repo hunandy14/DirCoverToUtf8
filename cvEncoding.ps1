@@ -19,28 +19,29 @@ function ReadContent {
         [Parameter(Position = 2, ParameterSetName = "B")]
         [switch] $DefaultEncoding
     )
-    # å¾ç®¡é“è¼¸å…¥
+    # ±qºŞ¹D¿é¤J
     if ($InputObject) { $Content = $InputObject }
-    # æª¢æŸ¥æª”æ¡ˆ
+    # ÀË¬dÀÉ®×
+    $Path = [IO.Path]::GetFullPath($Path)
     if (!(Test-Path $Path -PathType:Leaf)) {
-        Write-Error "è·¯å¾‘ä¸å­˜åœ¨"
+        Write-Error "¸ô®|¤£¦s¦b"
         return
     }
 
-    # ç²å–ç·¨ç¢¼
-    if ($DefaultEncoding) { # ä½¿ç”¨ç•¶å‰ç³»çµ±ç·¨ç¢¼
+    # Àò¨ú½s½X
+    if ($DefaultEncoding) { # ¨Ï¥Î·í«e¨t²Î½s½X
         $Enc = [Text.Encoding]::Default
-    } elseif ((!$Encoding) ) { # å®Œå…¨ä¸æŒ‡å®šé è¨­
+    } elseif ((!$Encoding) ) { # §¹¥ş¤£«ü©w¹w³]
         # $Enc = New-Object System.Text.UTF8Encoding $False
         $Enc = [Text.Encoding]::Default
-    } elseif ($Encoding -eq 65001) { # æŒ‡å®šUTF8
+    } elseif ($Encoding -eq 65001) { # «ü©wUTF8
         $Enc = New-Object System.Text.UTF8Encoding $False
-    } else { # ä½¿ç”¨è€…æŒ‡å®š
+    } else { # ¨Ï¥ÎªÌ«ü©w
         $Enc = [Text.Encoding]::GetEncoding($Encoding)
     }
 
-    # è®€å–æª”æ¡ˆ
-    $Content = [System.IO.File]::ReadAllLines($Path, $Enc)
+    # Åª¨úÀÉ®×
+    $Content = [IO.File]::ReadAllLines($Path, $Enc)
     return $Content
 }
 # ReadContent "enc\Encoding_SHIFT.txt" 932
@@ -66,35 +67,29 @@ function WriteContent {
         [System.Object] $InputObject
     )
     BEGIN {
-        # å¾ç®¡é“è¼¸å…¥
-        if ($InputObject) {
-            Write-Host "intput==="$InputObject
-            $Content = $InputObject
-        }
-
-        # ç²å–ç·¨ç¢¼
-        if ($DefaultEncoding) { # ä½¿ç”¨ç•¶å‰ç³»çµ±ç·¨ç¢¼
+        # Àò¨ú½s½X
+        if ($DefaultEncoding) { # ¨Ï¥Î·í«e¨t²Î½s½X
             $Enc = [Text.Encoding]::Default
-        } elseif ((!$Encoding) ) { # å®Œå…¨ä¸æŒ‡å®šé è¨­
+        } elseif ((!$Encoding) ) { # §¹¥ş¤£«ü©w¹w³]
             $Enc = New-Object System.Text.UTF8Encoding $False
             # $Enc = [Text.Encoding]::Default
-        } elseif ($Encoding -eq 65001) { # æŒ‡å®šUTF8
+        } elseif ($Encoding -eq 65001) { # «ü©wUTF8
             $Enc = New-Object System.Text.UTF8Encoding $False
-        } else { # ä½¿ç”¨è€…æŒ‡å®š
+        } else { # ¨Ï¥ÎªÌ«ü©w
             $Enc = [Text.Encoding]::GetEncoding($Encoding)
         }
 
-        # å»ºç«‹æª”æ¡ˆ
+        # «Ø¥ßÀÉ®×
         if (!$Append) { 
             (New-Item $Path -ItemType:File -Force) | Out-Null
-        } $Path = [System.IO.Path]::GetFullPath($Path)
+        } $Path = [IO.Path]::GetFullPath($Path)
         
     } process{
-        [System.IO.File]::AppendAllText($Path, "$_`n", $Enc);
+        [IO.File]::AppendAllText($Path, "$_`n", $Enc);
     }
     END { }
 }
-# å„ç¨®ç·¨ç¢¼è®€å¯«ç¯„ä¾‹
+# ¦UºØ½s½XÅª¼g½d¨Ò
 # (ReadContent "enc\Encoding_BIG5.txt" 950)|WriteContent "Out_BIG5.txt" 950
 # (ReadContent "enc\Encoding_UTF8.txt")|WriteContent "Out_BIG5.txt" 950
 # (ReadContent "enc\Encoding_BIG5.txt" -Def)|WriteContent "Out.txt"
@@ -122,9 +117,9 @@ function cvEnc{
         [Parameter(ParameterSetName = "")]
         [switch] $TrimFile
     )
-    # ç²å–ç•¶å‰ä½ç½®
+    # Àò¨ú·í«e¦ì¸m
     if ($PSScriptRoot) { $curDir = $PSScriptRoot } else { $curDir = (Get-Location).Path }
-    # è¼¸å‡ºä½ç½®ç‚ºç©ºæ™‚è‡ªå‹•æŒ‡å®šåˆ°æš«å­˜ç›®éŒ„
+    # ¿é¥X¦ì¸m¬°ªÅ®É¦Û°Ê«ü©w¨ì¼È¦s¥Ø¿ı
     if ($Temp) {
         $dstPath = $env:TEMP+"\cvEncode"
         $dstPath_bk = $env:TEMP + "\cvEncode_bk"
@@ -133,88 +128,88 @@ function cvEnc{
             (Get-ChildItem "$dstPath" -Recurse) | Move-Item -Destination:$dstPath_bk -Force
         }
     }
-    # ç·¨ç¢¼åç¨±
+    # ½s½X¦WºÙ
     $srcEncName = [Text.Encoding]::GetEncoding($srcEnc).WebName
     $dstEncName = [Text.Encoding]::GetEncoding($dstEnc).WebName
-    if (!$srcEncName -or !$dstEncName) { Write-Error "[éŒ¯èª¤]:: ç·¨ç¢¼è¼¸å…¥æœ‰èª¤, æª¢æŸ¥æ˜¯å¦æ‰“éŒ¯è™Ÿç¢¼äº†" }
-    # æª”æ¡ˆä¾†æº
+    if (!$srcEncName -or !$dstEncName) { Write-Error "[¿ù»~]:: ½s½X¿é¤J¦³»~, ÀË¬d¬O§_¥´¿ù¸¹½X¤F" }
+    # ÀÉ®×¨Ó·½
     Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
 
-    if (Test-Path $srcPath -PathType:Leaf) { # è¼¸å…¥çš„è·¯å¾‘ç‚ºæª”æ¡ˆ
+    if (Test-Path $srcPath -PathType:Leaf) { # ¿é¤Jªº¸ô®|¬°ÀÉ®×
         if ($Temp) { $dstPath = "$dstPath\" + (Get-Item $srcPath).Name }
         if (Test-Path $dstPath -PathType:Container){
-            Write-Error "[éŒ¯èª¤]:: `$dstPath=$dstPath æ˜¯è³‡æ–™å¤¾, å¿…é ˆç‚ºæª”æ¡ˆæˆ–ç©ºè·¯å¾‘"
+            Write-Error "[¿ù»~]:: `$dstPath=$dstPath ¬O¸ê®Æ§¨, ¥²¶·¬°ÀÉ®×©ÎªÅ¸ô®|"
             return
         }
-        # è¼¸å‡ºè·¯å¾‘
+        # ¿é¥X¸ô®|
         $F1 = (Get-Item $srcPath).FullName
         $F2 = $dstPath
         Write-Host "  From: " -NoNewline
         Write-Host "$F1" -ForegroundColor:White
-        Write-Host "  â””â”€To: " -NoNewline
+        Write-Host "  ¢|¢wTo: " -NoNewline
         Write-Host "$F2" -ForegroundColor:Yellow
-        # è¼¸å‡ºæª”æ¡ˆ
+        # ¿é¥XÀÉ®×
         $Content = (ReadContent $F1 $srcEnc)
         if ($TrimFile) { $Content = (TrimFile $Content) }
         if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
-        # é–‹å•Ÿæš«å­˜ç›®éŒ„
+        # ¶}±Ò¼È¦s¥Ø¿ı
         if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
         return
-    } elseif (Test-Path $srcPath -PathType:Container) { # è¼¸å…¥çš„è·¯å¾‘ç‚ºè³‡æ–™å¤¾
+    } elseif (Test-Path $srcPath -PathType:Container) { # ¿é¤Jªº¸ô®|¬°¸ê®Æ§¨
         if (Test-Path $dstPath -PathType:Leaf){
-            Write-Error "[éŒ¯èª¤]:: `$dstPath=$dstPath æ˜¯æª”æ¡ˆ, å¿…é ˆç‚ºè³‡æ–™å¤¾æˆ–ç©ºè·¯å¾‘"
+            Write-Error "[¿ù»~]:: `$dstPath=$dstPath ¬OÀÉ®×, ¥²¶·¬°¸ê®Æ§¨©ÎªÅ¸ô®|"
             return
         }
         $collection = Get-ChildItem $srcPath -Recurse -Include:$Filter
         foreach ($item in $collection) {
-            # ç²å–ç›¸å°è·¯å¾‘
+            # Àò¨ú¬Û¹ï¸ô®|
             Set-Location $srcPath;
             $rela = ($item|Resolve-Path -Relative) -replace("\.\\", "")
             Set-Location $curDir
-            # è¼¸å‡ºè·¯å¾‘
+            # ¿é¥X¸ô®|
             $F1=$item.FullName
             $F2=$dstPath.TrimEnd('\') + "\$rela"
             Write-Host "  From: " -NoNewline
             Write-Host "$rela" -ForegroundColor:White
-            Write-Host "  â””â”€To: " -NoNewline
+            Write-Host "  ¢|¢wTo: " -NoNewline
             Write-Host "$F2" -ForegroundColor:Yellow
-            # è¼¸å‡ºæª”æ¡ˆ
+            # ¿é¥XÀÉ®×
             $Content = (ReadContent $F1 $srcEnc)
             if ($TrimFile) { $Content = TrimFile $Content }
             if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
         }
         Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
-        # é–‹å•Ÿæš«å­˜ç›®éŒ„
+        # ¶}±Ò¼È¦s¥Ø¿ı
         if ($Temp) { explorer $dstPath }
         return
     }
     else {
-        Write-Error "[éŒ¯èª¤]:: `$srcPath=$srcPath è©²è·¯å¾‘æœ‰èª¤"
+        Write-Error "[¿ù»~]:: `$srcPath=$srcPath ¸Ó¸ô®|¦³»~"
     }
 }
 
 # function __Test_cvEnc__ {
-    # è½‰æ›ç›¸å°è·¯å¾‘è³‡æ–™æ¸¬è©¦
+    # Âà´«¬Û¹ï¸ô®|¸ê®Æ´ú¸Õ
     # $path1 = ".\enc\932"
     # $path2 = ".\out"
     # cvEnc $path1 $path2 932
     # cvEnc $path1 $path2 932 -TrimFile
-    # è½‰æ›ç›¸å°è·¯å¾‘æª”æ¡ˆæ¸¬è©¦
+    # Âà´«¬Û¹ï¸ô®|ÀÉ®×´ú¸Õ
     # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932
     # cvEnc ".\enc\Trim.txt" ".\out.txt" -TrimFile
     #
-    # è½‰æ›çµ•å°è·¯å¾‘è³‡æ–™å¤¾æ¸¬è©¦
+    # Âà´«µ´¹ï¸ô®|¸ê®Æ§¨´ú¸Õ
     # $path1 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\enc\932"
     # $path2 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\out"
     # cvEnc $path1 $path2 932
     # cvEnc $path1 $path2 932 -TrimFile
-    # è½‰æ›çµ•å°è·¯å¾‘æª”æ¡ˆæ¸¬è©¦
+    # Âà´«µ´¹ï¸ô®|ÀÉ®×´ú¸Õ
     # $path1 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\enc\932\Trim.txt"
     # $path2 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\out.txt"
     # cvEnc $path1 $path2 932
     # cvEnc $path1 $path2 932 -TrimFile
     # 
-    # ç©ºè·¯å¾‘è‡ªå‹•æŒ‡å®šåˆ°æš«å­˜ç›®éŒ„
+    # ªÅ¸ô®|¦Û°Ê«ü©w¨ì¼È¦s¥Ø¿ı
     # cvEnc ".\enc\932\kyouto.txt" 932 -Temp
     # cvEnc ".\enc\932\kyouto.txt" 932 65001
     # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932 65001
