@@ -1,7 +1,7 @@
 PowerShell 檔案編碼轉換器
 ===
 
-### API使用說明
+## API使用說明
 - @param 1 : 輸入路徑(自動判別目錄或檔案)
 - @param 2 : 輸出路徑(自動判別目錄或檔案)
 - @param 3 : 輸入檔案編碼代號(省略則為當前系統編碼)
@@ -10,7 +10,7 @@ PowerShell 檔案編碼轉換器
 - @param -TrimFile : 消除行末空白與結尾多餘換行
 - @param -Filter   : 僅轉換特定副檔名的檔案
 
-#### 查詢編碼代號
+### 查詢編碼代號
 
 ```sh
 # 查詢 GB2312 的編碼 (936)
@@ -23,7 +23,7 @@ PowerShell -C "& {return [Text.Encoding]::Default}"
 [Text.Encoding]::Default
 ```
 
-### API 使用範例
+## API 使用範例
 
 ``` ps1
 # 載入函式
@@ -61,9 +61,8 @@ powershell -c "irm bit.ly/3pkjAtp|iex; cvEnc %path1% %path2% 932"
 
 ```
 
-### API 使用範例2
-檔案讀寫
-
+## API 使用範例2
+ReadContent
 ```ps1
 # 載入函式
 irm bit.ly/3pkjAtp|iex; 
@@ -71,10 +70,22 @@ irm bit.ly/3pkjAtp|iex;
 # 讀取檔案
 ReadContent "enc\Encoding_UTF8.txt"
 ReadContent "enc\Encoding_BIG5.txt" 950
+```
 
-# 輸出檔案
-$CT="這是中文字編碼BIG5"
-$CT|WriteContent "Out_BIG5.txt"
-$CT|WriteContent "Out_BIG5.txt" 950
-$CT|WriteContent "Out_BIG5.txt" -DefaultEncoding
+WriteContent
+```ps1
+# 載入函式
+irm bit.ly/3pkjAtp|iex; 
+
+# 輸出到檔案 (依照PowerShell編碼)
+"中文BIG5"|WriteContent "Out_BIG5.txt"
+# 輸出到檔案 (依照作業系統編碼)
+"中文BIG5"|WriteContent "Out_BIG5.txt" -SystemEncoding
+# 追加到檔案 (BIG5)
+"中文BIG5"|WriteContent "Out_BIG5.txt" 65001 -Append
+
+# 輸出到檔案 (UTF-8 無 BOM)
+"中文BIG5"|WriteContent "Out_BIG5.txt" 65001
+# 輸出到檔案 (UTF-8 有 BOM)
+"中文BIG5"|WriteContent "Out_BIG5.txt" 65001 -BOM_UTF8
 ```
