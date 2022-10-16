@@ -78,14 +78,14 @@ WriteContent
 irm bit.ly/3pkjAtp|iex; 
 
 # 輸出到檔案 (依照PowerShell編碼)
-"中文BIG5"|WriteContent "Out_BIG5.txt"
+"中文BIG5"|WriteContent "out\Out1.txt"
 # 輸出到檔案 (依照作業系統編碼)
-"中文BIG5"|WriteContent "Out_BIG5.txt" -SystemEncoding
+"中文BIG5"|WriteContent "out\Out2.txt" -SystemEncoding
 # 追加到檔案 (BIG5)
-"中文BIG5"|WriteContent "Out_BIG5.txt" 65001 -Append
+"中文BIG5"|WriteContent "out\Out3.txt" 950 -Append
 
 # 輸出到檔案 (UTF-8 無 BOM)
-"中文BIG5"|WriteContent "Out_BIG5.txt" 65001
+"中文BIG5"|WriteContent "out\Out4.txt" 65001
 # 輸出到檔案 (UTF-8 有 BOM)
-"中文BIG5"|WriteContent "Out_BIG5.txt" 65001 -BOM_UTF8
+"中文BIG5"|WriteContent "out\Out5.txt" 65001 -BOM_UTF8
 ```
