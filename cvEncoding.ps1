@@ -1,3 +1,7 @@
+# 載入Get-Encoding函式
+Invoke-RestMethod 'raw.githubusercontent.com/hunandy14/Get-Encoding/master/Get-Encoding.ps1'|Invoke-Expression
+
+# 清理檔案中多餘的空白
 function TrimFile {
     param (
         [System.Object] $Content,
@@ -9,29 +13,29 @@ function TrimFile {
     } $Content = $Content[0..($Line)]
     return $Content
 }
+
+# 讀取檔案
 function ReadContent {
     [CmdletBinding(DefaultParameterSetName = "A")]
     param (
-        [Parameter(Mandatory, Position = 0, ParameterSetName = "")]
+        [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
         [string] $Path,
         [Parameter(Position = 2, ParameterSetName = "A")]
         [int] $Encoding,
         [Parameter(Position = 2, ParameterSetName = "B")]
         [switch] $DefaultEncoding
     )
-    # 從管道輸入
-    if ($InputObject) { $Content = $InputObject }
     # 檢查檔案
-    $Path = [IO.Path]::GetFullPath($Path)
-    if (!(Test-Path $Path -PathType:Leaf)) {
-        Write-Error "路徑不存在"
-        return
+    if ($Path) {
+        [IO.Directory]::SetCurrentDirectory(((Get-Location -PSProvider FileSystem).ProviderPath))
+        $Path = [System.IO.Path]::GetFullPath($Path)
+        if (!(Test-Path -PathType:Leaf $Path)) { Write-Error "Input file `"$Path`" does not exist" -ErrorAction:Stop }
     }
 
     # 獲取編碼
     if ($DefaultEncoding) { # 使用當前系統編碼
         # $Enc = [Text.Encoding]::Default
-        $Enc = PowerShell.exe -C "& {return [Text.Encoding]::Default}"
+        $Enc = PowerShell -NoP "& {return [Text.Encoding]::Default}"
     } elseif ((!$Encoding) ) { # 完全不指定預設
         # $Enc = New-Object System.Text.UTF8Encoding $False
         $Enc = [Text.Encoding]::Default
@@ -46,11 +50,10 @@ function ReadContent {
     return $Content
 }
 # ReadContent "enc\Encoding_SHIFT.txt" 932
-# (ReadContent "enc\Encoding_UTF8.txt" 65001)
+# ReadContent "enc\Encoding_UTF8.txt" UTF8
 # TrimFile (ReadContent "enc\Encoding_UTF8.txt" 65001)
-# return
 
-# 輸出字串到檔案
+# 輸出檔案
 function WriteContent {
     [CmdletBinding(DefaultParameterSetName = "A")]
     param (
