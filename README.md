@@ -18,7 +18,7 @@ PowerShell 檔案編碼轉換器
 # 查詢 UTF8 的編碼 (65001)
 [Text.Encoding]::GetEncoding('UTF-8')
 # 查詢 本機 編碼
-PowerShell -C "& {return [Text.Encoding]::Default}"
+PowerShell -Nop "& {return [Text.Encoding]::Default}"
 # 查詢 Pwsh 當前編碼
 [Text.Encoding]::Default
 ```
