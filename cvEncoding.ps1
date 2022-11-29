@@ -57,7 +57,7 @@ function ReadContent {
 function WriteContent {
     [CmdletBinding(DefaultParameterSetName = "A")]
     param (
-        [Parameter(Mandatory, Position = 0, ParameterSetName = "")]
+        [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
         [string] $Path,
         [Parameter(Position = 1, ParameterSetName = "A")] # 預設值是當前Powershell編碼
         [int] $Encoding = (([Text.Encoding]::Default).CodePage), # (Pwsh5=系統, Pwsh7=UTF8)
@@ -90,10 +90,12 @@ function WriteContent {
         } else { # 檔案已存在 -> 依選項清空
             if (!$Append) { (New-Item $Path -ItemType:File -Force)|Out-Null }
         }
+        $Object = ""
     } process{
-        [IO.File]::AppendAllText($Path, "$_`n", $Enc);
+        $Object += "$InputObject`r`n"
+    } END {
+        [IO.File]::AppendAllText($Path, $Object, $Enc)
     }
-    END { }
 }
 # 各種編碼讀寫範例
 # "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt"
@@ -101,6 +103,16 @@ function WriteContent {
 # "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out3.txt" -Encoding:65001
 # "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out4.txt" -Encoding:65001 -BOM_UTF8
 # "あいうえお日本語の入力テスト                  "|WriteContent "out\Out5.txt" -Encoding:932
+
+# $Enc = (New-Object System.Text.UTF8Encoding $False)
+# $a=[IO.File]::ReadAllLines("SpaceFile.txt", $Enc)
+# $a=[IO.File]::ReadLines("SpaceFile.txt", $Enc)
+# $a=$null
+# $a=Get-Content "SpaceFile.txt"
+# "a:: $($a.Count)"
+# $a|WriteContent "out\Out6.txt" -Encoding:65001 -BOM_UTF8
+
+
 
 function cvEnc{
     [CmdletBinding(DefaultParameterSetName = "A")]
