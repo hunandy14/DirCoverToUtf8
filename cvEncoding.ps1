@@ -124,9 +124,12 @@ function cvEnc{
         [Parameter(Position = 2, ParameterSetName = "A")]
         [Parameter(Position = 1, ParameterSetName = "B")]
         [int] $srcEnc = [Text.Encoding]::Default.CodePage,
+        
         [Parameter(Position = 3, ParameterSetName = "A")]
         [Parameter(Position = 2, ParameterSetName = "B")]
         [int] $dstEnc = 65001,
+        [switch] $ConvertToUTF8,
+        [switch] $ConvertToSystem,
         
         [Parameter(ParameterSetName = "B")]
         [switch] $Temp,
@@ -149,9 +152,24 @@ function cvEnc{
         }
     }
     # 編碼名稱
-    $srcEncName = [Text.Encoding]::GetEncoding($srcEnc).WebName
-    $dstEncName = [Text.Encoding]::GetEncoding($dstEnc).WebName
+    if (!$__SysEnc__) { $Script:__SysEnc__ = [Text.Encoding]::GetEncoding((powershell -nop "([Text.Encoding]::Default).WebName")) }
+    if ($ConvertToUTF8) {
+        $srcEnc = ($__SysEnc__).CodePage
+        $srcEncName = ($__SysEnc__).WebName
+        $dstEnc = (New-Object System.Text.UTF8Encoding $False).CodePage
+        $dstEncName = (New-Object System.Text.UTF8Encoding $False).WebName
+    } elseif ($ConvertToSystem) {
+        $srcEnc = (New-Object System.Text.UTF8Encoding $False).CodePage
+        $srcEncName = (New-Object System.Text.UTF8Encoding $False).WebName
+        $dstEnc = ($__SysEnc__).CodePage
+        $dstEncName = ($__SysEnc__).CodePage
+    } else {
+        $srcEncName = [Text.Encoding]::GetEncoding($srcEnc).WebName
+        $dstEncName = [Text.Encoding]::GetEncoding($dstEnc).WebName
+    }
     if (!$srcEncName -or !$dstEncName) { Write-Error "[錯誤]:: 編碼輸入有誤, 檢查是否打錯號碼了" -ErrorAction Stop}
+    
+    
     # 檔案來源
     Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
 
@@ -233,4 +251,8 @@ function cvEnc{
     # cvEnc ".\enc\932\kyouto.txt" 932 65001
     # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932 65001
     # cvEnc ".\enc\932" 932 65001
+    # 
+    # 預選編碼測試
+    # cvEnc "enc\Encoding_BIG5.txt" -ConvertToUTF8 -Temp
+    # cvEnc "enc\Encoding_UTF8.txt" -ConvertToSystem -Temp
 # } __Test_cvEnc__
