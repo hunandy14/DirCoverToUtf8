@@ -27,7 +27,7 @@ PowerShell -Nop "& {return [Text.Encoding]::Default}"
 
 ``` ps1
 # 載入函式
-irm bit.ly/3pkjAtp|iex; 
+irm bit.ly/cvEncoding|iex; 
 
 # 設定目錄
 $path1 = ".\enc\932"
@@ -36,19 +36,19 @@ $file1 = ".\enc\932\kyouto.txt"
 $file2 = ".\out.txt"
 
 # 轉換檔案 932 -> UTF8
-irm bit.ly/3pkjAtp|iex;cvEnc $file1 $file2 932
+irm bit.ly/cvEncoding|iex;cvEnc $file1 $file2 932
 # 轉換檔案 932 -> big5
-irm bit.ly/3pkjAtp|iex;cvEnc $file1 $file2 932 950
+irm bit.ly/cvEncoding|iex;cvEnc $file1 $file2 932 950
 
 # 轉換目錄 932 -> UTF8
-irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932
+irm bit.ly/cvEncoding|iex;cvEnc $path1 $path2 932
 # 轉換目錄 932 -> big5
-irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932 950
+irm bit.ly/cvEncoding|iex;cvEnc $path1 $path2 932 950
 
 # 輸出時消除行末空白與結尾多餘換行
-irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932 -TrimFile
+irm bit.ly/cvEncoding|iex;cvEnc $path1 $path2 932 -TrimFile
 # 僅輸出txt與md檔案
-irm bit.ly/3pkjAtp|iex;cvEnc $path1 $path2 932 -Filter:@("*.txt", "*.md")
+irm bit.ly/cvEncoding|iex;cvEnc $path1 $path2 932 -Filter:@("*.txt", "*.md")
 
 ```
 
@@ -57,7 +57,7 @@ cmd用法
 ```bat
 SET path1=".\enc\932"
 SET path2=".\out"
-powershell -c "irm bit.ly/3pkjAtp|iex; cvEnc %path1% %path2% 932"
+powershell -c "irm bit.ly/cvEncoding|iex; cvEnc %path1% %path2% 932"
 
 ```
 
@@ -65,7 +65,7 @@ powershell -c "irm bit.ly/3pkjAtp|iex; cvEnc %path1% %path2% 932"
 ReadContent
 ```ps1
 # 載入函式
-irm bit.ly/3pkjAtp|iex; 
+irm bit.ly/cvEncoding|iex; 
 
 # 讀取檔案
 ReadContent "enc\Encoding_UTF8.txt"
@@ -75,7 +75,7 @@ ReadContent "enc\Encoding_BIG5.txt" 950
 WriteContent
 ```ps1
 # 載入函式
-irm bit.ly/3pkjAtp|iex; 
+irm bit.ly/cvEncoding|iex; 
 
 # 輸出到檔案 (依照PowerShell編碼)
 "中文BIG5"|WriteContent "out\Out1.txt"
