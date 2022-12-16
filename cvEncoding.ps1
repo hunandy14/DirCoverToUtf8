@@ -5,10 +5,10 @@ Invoke-RestMethod 'raw.githubusercontent.com/hunandy14/Get-Encoding/master/Get-E
 function TrimFile {
     param (
         [System.Object] $Content,
-        [string] $str = " |`t"
+        [string] $str
     )
     for ($i = 0; $i -lt $Content.Count; $i++) {
-        $Content[$i] = $Content[$i].TrimEnd(" |`t")
+        $Content[$i] = $Content[$i].TrimEnd($str)
         if ($Content[$i] -ne "") { $Line = $i }
     } $Content = $Content[0..($Line)]
     return $Content
