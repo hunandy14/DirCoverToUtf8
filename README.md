@@ -12,11 +12,13 @@ PowerShell 檔案編碼轉換器
 
 ### 查詢編碼代號
 
-```sh
+```ps1
 # 查詢 GB2312 的編碼 (936)
 [Text.Encoding]::GetEncoding('GB2312')
 # 查詢 UTF8 的編碼 (65001)
 [Text.Encoding]::GetEncoding('UTF-8')
+# 查詢 UTF8-NonBOM 的編碼 (65001)
+(New-Object System.Text.UTF8Encoding $False)
 # 查詢 本機 編碼
 PowerShell -Nop "& {return [Text.Encoding]::Default}"
 # 查詢 Pwsh 當前編碼
