@@ -20,15 +20,17 @@ function TrimFile {
 
 # 讀取檔案
 function ReadContent {
-    [CmdletBinding(DefaultParameterSetName = "A")]
+    [CmdletBinding(DefaultParameterSetName = "Encoding")]
     param (
+        # 輸入路徑
         [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
         [string] $Path,
-        [Parameter(Position = 1, ParameterSetName = "A")]
+        # 編碼處理
+        [Parameter(Position = 1, ParameterSetName = "Encoding")]
         [object] $Encoding,
-        [Parameter(Position = 1, ParameterSetName = "B")]
+        [Parameter(Position = 1, ParameterSetName = "UTF8")]
         [switch] $UTF8,
-        [Parameter(Position = 1, ParameterSetName = "C")]
+        [Parameter(Position = 1, ParameterSetName = "UTF8BOM")]
         [switch] $UTF8BOM
     )
     
@@ -51,7 +53,8 @@ function ReadContent {
         
         # 檢查檔案
         if ($Path -and (Test-Path -PathType:Leaf $Path)) {
-            $Path = [IO.Path]::GetFullPath([IO.Path]::Combine((Get-Location -PSProvider FileSystem).ProviderPath, $Path))
+            [IO.Directory]::SetCurrentDirectory(((Get-Location -PSProvider FileSystem).ProviderPath))
+            $Path = [IO.Path]::GetFullPath($Path)
         } else { Write-Error "Input file `"$Path`" does not exist" -ErrorAction:Stop }
         # 開啟檔案
         $reader = New-Object System.IO.StreamReader($Path, $Enc)
@@ -79,62 +82,87 @@ function ReadContent {
 
 # 輸出檔案
 function WriteContent {
-    [CmdletBinding(DefaultParameterSetName = "A")]
+    [CmdletBinding(DefaultParameterSetName = "Encoding")]
     param (
+        # 輸出路徑
         [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
         [string] $Path,
-        [Parameter(Position = 1, ParameterSetName = "A")] # 預設值是當前Powershell編碼
-        [int] $Encoding = (([Text.Encoding]::Default).CodePage), # (Pwsh5=系統, Pwsh7=UTF8)
-        [Parameter(Position = 1, ParameterSetName = "B")] # 指定成作業系統的編碼
-        [switch] $SystemEncoding,
-        [Parameter(ParameterSetName = "")]
-        [switch] $Append, # 不清除原有的檔案
-        [Parameter(ParameterSetName = "")]
-        [switch] $BOM_UTF8, # 輸出BOM的UTF8檔案
         [Parameter(ValueFromPipeline, ParameterSetName = "")]
-        [System.Object] $InputObject
+        [System.Object] $InputObject,
+        # 編碼處理
+        [Parameter(Position = 1, ParameterSetName = "Encoding")]
+        [object] $Encoding,
+        [Parameter(Position = 1, ParameterSetName = "UTF8")]
+        [switch] $UTF8,
+        [Parameter(Position = 1, ParameterSetName = "UTF8BOM")]
+        [switch] $UTF8BOM,
+        # 輸出參數
+        [Parameter(ParameterSetName = "")]
+        [switch] $Append
     )
-    BEGIN {
-        # 獲取編碼
-        if ($SystemEncoding) { # 把系統編碼覆蓋到Encoding
-            $Encoding = PowerShell -NoP -C "([Text.Encoding]::Default).CodePage"
-        } $Enc = [Text.Encoding]::GetEncoding($Encoding)
-        # 修復 UTF-8 時預設帶有BOM問題
-        if (($Enc -eq ([Text.Encoding]::GetEncoding(65001))) -and (!$BOM_UTF8)) {
-            $Enc = (New-Object System.Text.UTF8Encoding $False)
+    begin {
+        # 處理編碼
+        if ($Encoding) { # 自訂編碼
+            if ($Encoding -is [Text.Encoding]) {
+                $Enc = $Encoding
+            } else { $Enc = Get-Encoding $Encoding }
+        } else { # 預選項編碼
+            if ($UTF8) {
+                $Enc = New-Object System.Text.UTF8Encoding $False
+            } elseif ($UTF8BOM) {
+                $Enc = New-Object System.Text.UTF8Encoding $True
+            } else { # 系統語言
+                if (!$__SysEnc__) { $Script:__SysEnc__ = [Text.Encoding]::GetEncoding((powershell -nop "([Text.Encoding]::Default).WebName")) }
+                $Enc = $__SysEnc__
+            }
         }
+        
         # 修復路徑
         [IO.Directory]::SetCurrentDirectory(((Get-Location -PSProvider FileSystem).ProviderPath))
-        $Path = [System.IO.Path]::GetFullPath($Path)
-        # 建立並清空檔案
+        $Path = [IO.Path]::GetFullPath($Path)
+        
+        # 檢查路徑是否為資料夾
         if (Test-Path -PathType:Container $Path) {
             Write-Error "The Path `"$Path`" cannot be a folder"; break
-        }elseif (!(Test-Path $Path)) { # 檔案不存在 -> 新增空檔
-            (New-Item $Path -ItemType:File -Force)|Out-Null
-        } else { # 檔案已存在 -> 依選項清空
-            if (!$Append) { (New-Item $Path -ItemType:File -Force)|Out-Null }
         }
-        $Object = ""
-    } process{
-        $Object += "$InputObject`r`n"
-    } END {
-        [IO.File]::AppendAllText($Path, $Object, $Enc)
+        
+        # 根據 $Append 參數決定 FileMode
+        $FileMode = $Append ? [IO.FileMode]::Append : [IO.FileMode]::Create
+
+        # 建立 FileStream
+        $FileStream = New-Object IO.FileStream($Path, $FileMode)
+        $StreamWriter = New-Object IO.StreamWriter($FileStream, $Enc)
+        $firstLine = $true
+    }
+    
+    process {
+        if($firstLine) {
+            $firstLine = $false
+        } else {
+            $InputObject = "`r`n" + $InputObject
+        }
+        $StreamWriter.Write($InputObject)
+    }
+    
+    end {
+        $StreamWriter.Close()
+        $FileStream.Close()
     }
 }
-# 各種編碼讀寫範例
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt"
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out2.txt" -SystemEncoding
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out3.txt" -Encoding:65001
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out4.txt" -Encoding:65001 -BOM_UTF8
-# "あいうえお日本語の入力テスト                  "|WriteContent "out\Out5.txt" -Encoding:932
 
-# $Enc = (New-Object System.Text.UTF8Encoding $False)
-# $a=[IO.File]::ReadAllLines("SpaceFile.txt", $Enc)
-# $a=[IO.File]::ReadLines("SpaceFile.txt", $Enc)
-# $a=$null
-# $a=Get-Content "SpaceFile.txt"
-# "a:: $($a.Count)"
-# $a|WriteContent "out\Out6.txt" -Encoding:65001 -BOM_UTF8
+## 各種編碼讀寫範例
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt"
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out2.txt" big5
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out3.txt" UTF8
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out4.txt" -UTF8BOM
+# "あいうえお日本語の入力テスト                  "|WriteContent "out\Out5.txt" 932
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt" -Append
+## 結尾空行測試
+# "0行空格測試"|WriteContent "out\Out11.txt" -UTF8BOM
+# @("1行空格測試", "")|WriteContent "out\Out12.txt" -UTF8BOM
+# @("2行空格測試", "", "")|WriteContent "out\Out13.txt" -UTF8BOM
+## 組合測試
+# ReadContent "enc\Encoding_SHIFT.txt" 932 | WriteContent "out\Out21.txt" -UTF8
 
 
 
@@ -277,6 +305,6 @@ function cvEnc{
     # cvEnc ".\enc\932" 932 65001
     # 
     # 預選編碼測試
-    # cvEnc "enc\Encoding_BIG5.txt" -ConvertToUTF8 -Temp
-    # cvEnc "enc\Encoding_UTF8.txt" -ConvertToSystem -Temp
+    # cvEnc "enc\Encoding_UTF8.txt" -ConvertToUTF8 -Temp
+    # cvEnc "enc\Encoding_BIG5.txt" -ConvertToSystem -Temp
 # } __Test_cvEnc__
