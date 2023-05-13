@@ -1,6 +1,8 @@
 # 載入Get-Encoding函式
 Invoke-RestMethod 'raw.githubusercontent.com/hunandy14/Get-Encoding/master/Get-Encoding.ps1'|Invoke-Expression
 
+
+
 # 清理檔案中多餘的空白
 function TrimFile {
     param (
@@ -14,44 +16,66 @@ function TrimFile {
     return $Content
 }
 
+
+
 # 讀取檔案
 function ReadContent {
     [CmdletBinding(DefaultParameterSetName = "A")]
     param (
         [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
         [string] $Path,
-        [Parameter(Position = 2, ParameterSetName = "A")]
-        [int] $Encoding,
-        [Parameter(Position = 2, ParameterSetName = "B")]
-        [switch] $DefaultEncoding
+        [Parameter(Position = 1, ParameterSetName = "A")]
+        [object] $Encoding,
+        [Parameter(Position = 1, ParameterSetName = "B")]
+        [switch] $UTF8,
+        [Parameter(Position = 1, ParameterSetName = "C")]
+        [switch] $UTF8BOM
     )
-    # 檢查檔案
-    if ($Path) {
-        [IO.Directory]::SetCurrentDirectory(((Get-Location -PSProvider FileSystem).ProviderPath))
-        $Path = [System.IO.Path]::GetFullPath($Path)
-        if (!(Test-Path -PathType:Leaf $Path)) { Write-Error "Input file `"$Path`" does not exist" -ErrorAction:Stop }
+    
+    begin {
+        # 處理編碼
+        if ($Encoding) { # 自訂編碼
+            if ($Encoding -is [Text.Encoding]) {
+                $Enc = $Encoding
+            } else { $Enc = Get-Encoding $Encoding }
+        } else { # 預選項編碼
+            if ($UTF8) {
+                $Enc = New-Object System.Text.UTF8Encoding $False
+            } elseif ($UTF8BOM) {
+                $Enc = New-Object System.Text.UTF8Encoding $True
+            } else { # 系統語言
+                if (!$__SysEnc__) { $Script:__SysEnc__ = [Text.Encoding]::GetEncoding((powershell -nop "([Text.Encoding]::Default).WebName")) }
+                $Enc = $__SysEnc__
+            }
+        }
+        
+        # 檢查檔案
+        if ($Path -and (Test-Path -PathType:Leaf $Path)) {
+            $Path = [IO.Path]::GetFullPath([IO.Path]::Combine((Get-Location -PSProvider FileSystem).ProviderPath, $Path))
+        } else { Write-Error "Input file `"$Path`" does not exist" -ErrorAction:Stop }
+        # 開啟檔案
+        $reader = New-Object System.IO.StreamReader($Path, $Enc)
     }
-
-    # 獲取編碼
-    if ($DefaultEncoding) { # 使用當前系統編碼
-        # $Enc = [Text.Encoding]::Default
-        $Enc = PowerShell -NoP "& {return [Text.Encoding]::Default}"
-    } elseif ((!$Encoding) ) { # 完全不指定預設
-        # $Enc = New-Object System.Text.UTF8Encoding $False
-        $Enc = [Text.Encoding]::Default
-    } elseif ($Encoding -eq 65001) { # 指定UTF8
-        $Enc = New-Object System.Text.UTF8Encoding $False
-    } else { # 使用者指定
-        $Enc = [Text.Encoding]::GetEncoding($Encoding)
+    
+    process {
+        # 讀取檔案
+        while ($null -ne ($line = $reader.ReadLine())) {
+            Write-Output $line
+        }
     }
-
-    # 讀取檔案
-    $Content = [IO.File]::ReadAllLines($Path, $Enc)
-    return $Content
+    
+    end {
+        # 關閉檔案
+        if ($null -ne $reader) {
+            $reader.Dispose()
+        }
+    }
 }
 # ReadContent "enc\Encoding_SHIFT.txt" 932
 # ReadContent "enc\Encoding_UTF8.txt" UTF8
 # TrimFile (ReadContent "enc\Encoding_UTF8.txt" 65001)
+
+
 
 # 輸出檔案
 function WriteContent {
