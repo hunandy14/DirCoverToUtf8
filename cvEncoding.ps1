@@ -125,6 +125,10 @@ function WriteContent {
         if (Test-Path -PathType:Container $Path) {
             Write-Error "The Path `"$Path`" cannot be a folder"; break
         }
+        # 檔案不存在新增空檔
+        if (!(Test-Path $Path)) {
+            New-Item $Path -ItemType:File -Force | Out-Null
+        }
         
         # 根據 $Append 參數決定 FileMode
         $FileMode = $Append ? [IO.FileMode]::Append : [IO.FileMode]::Create
@@ -157,6 +161,7 @@ function WriteContent {
 # "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out4.txt" -UTF8BOM
 # "あいうえお日本語の入力テスト                  "|WriteContent "out\Out5.txt" 932
 # "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt" -Append
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\new\Out1.txt" -Append
 ## 結尾空行測試
 # "0行空格測試"|WriteContent "out\Out11.txt" -UTF8BOM
 # @("1行空格測試", "")|WriteContent "out\Out12.txt" -UTF8BOM
