@@ -68,13 +68,16 @@ function ReadContent {
     }
     
     end {
+        # 補償結尾換行
+        $reader.BaseStream.Position -= 1
+        if ([char]$reader.Read() -eq "`n") { "" }
         # 關閉檔案
         if ($null -ne $reader) {
             $reader.Dispose()
         }
     }
 }
-# ReadContent "enc\Encoding_SHIFT.txt" 932
+# ReadContent "enc\Encoding_SHIFT.txt" 932 
 # ReadContent "enc\Encoding_UTF8.txt" UTF8
 # TrimFile (ReadContent "enc\Encoding_UTF8.txt" 65001)
 
@@ -98,7 +101,12 @@ function WriteContent {
         [switch] $UTF8BOM,
         # 輸出參數
         [Parameter(ParameterSetName = "")]
-        [switch] $Append
+        [switch] $Append,
+        [switch] $TrimWhiteSpace, # 清除行尾空白
+        [switch] $AutoAppendEndLine, # 保持結尾至少有一行空白
+        # [switch] $ForceOneEndLine, # 修剪結尾空行
+        [Parameter(ParameterSetName = "")]
+        [switch] $LF
     )
     begin {
         # 處理編碼
@@ -116,6 +124,10 @@ function WriteContent {
                 $Enc = $__SysEnc__
             }
         }
+        # 換行符號
+        if (-not $LF) {
+            $LineTerminator = "`r`n"
+        } else { $LineTerminator = "`n" }
         
         # 修復路徑
         [IO.Directory]::SetCurrentDirectory(((Get-Location -PSProvider FileSystem).ProviderPath))
@@ -140,15 +152,22 @@ function WriteContent {
     }
     
     process {
-        if($firstLine) {
-            $firstLine = $false
-        } else {
-            $InputObject = "`r`n" + $InputObject
+        # 清除行尾空白
+        if ($TrimWhiteSpace) {
+            $InputObject = $InputObject.TrimEnd()
         }
+        # 追加換行(首行不換)
+        if(-not $firstLine) {
+            $InputObject = $LineTerminator + $InputObject
+        } else { $firstLine = $false }
+        # 寫入檔案
         $StreamWriter.Write($InputObject)
     }
     
     end {
+        # 保持結尾至少有一行空白
+        if ($AutoAppendEndLine -and ($InputObject -ne $LineTerminator)) { $StreamWriter.Write($LineTerminator) }
+        # 關閉檔案
         $StreamWriter.Close()
         $FileStream.Close()
     }
@@ -167,8 +186,10 @@ function WriteContent {
 # @("1行空格測試", "")|WriteContent "out\Out12.txt" -UTF8BOM
 # @("2行空格測試", "", "")|WriteContent "out\Out13.txt" -UTF8BOM
 ## 組合測試
-# ReadContent "enc\Encoding_SHIFT.txt" 932 | WriteContent "out\Out21.txt" -UTF8
-
+# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8
+# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -LF
+# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -AutoAppendEndLine
+# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -TrimWhiteSpace
 
 
 function cvEnc{
