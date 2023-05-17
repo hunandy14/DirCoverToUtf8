@@ -1,23 +1,6 @@
 # 載入Get-Encoding函式
 Invoke-RestMethod 'raw.githubusercontent.com/hunandy14/Get-Encoding/master/Get-Encoding.ps1'|Invoke-Expression
 
-
-
-# 清理檔案中多餘的空白
-function TrimFile {
-    param (
-        [System.Object] $Content,
-        [string] $str
-    )
-    for ($i = 0; $i -lt $Content.Count; $i++) {
-        $Content[$i] = $Content[$i].TrimEnd($str)
-        if ($Content[$i] -ne "") { $Line = $i }
-    } $Content = $Content[0..($Line)]
-    return $Content
-}
-
-
-
 # 讀取檔案
 function ReadContent {
     [CmdletBinding(DefaultParameterSetName = "Encoding")]
@@ -81,8 +64,6 @@ function ReadContent {
 # ReadContent "enc\Encoding_UTF8.txt" UTF8
 # TrimFile (ReadContent "enc\Encoding_UTF8.txt" 65001)
 
-
-
 # 輸出檔案
 function WriteContent {
     [CmdletBinding(DefaultParameterSetName = "Encoding")]
@@ -104,7 +85,6 @@ function WriteContent {
         [switch] $Append,
         [switch] $TrimWhiteSpace, # 清除行尾空白
         [switch] $AutoAppendEndLine, # 保持結尾至少有一行空白
-        # [switch] $ForceOneEndLine, # 修剪結尾空行
         [Parameter(ParameterSetName = "")]
         [switch] $LF
     )
@@ -172,8 +152,7 @@ function WriteContent {
         $FileStream.Close()
     }
 }
-
-## 各種編碼讀寫範例
+## 種編碼讀寫範例
 # "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt"
 # "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out2.txt" big5
 # "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out3.txt" UTF8
@@ -192,7 +171,11 @@ function WriteContent {
 # ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -TrimWhiteSpace
 
 
-function cvEnc{
+
+
+
+# 批量轉換編碼
+function cvEnc {
     [CmdletBinding(DefaultParameterSetName = "A")]
     param (
         [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
@@ -264,9 +247,10 @@ function cvEnc{
         Write-Host "  └─To: " -NoNewline
         Write-Host "$F2" -ForegroundColor:Yellow
         # 輸出檔案
-        $Content = (ReadContent $F1 $srcEnc)
-        if ($TrimFile) { $Content = (TrimFile $Content) }
-        if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
+        if (!$Preview) {
+            ReadContent $F1 $srcEnc | 
+            WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile
+        }
         # 開啟暫存目錄
         if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
         return
@@ -289,9 +273,10 @@ function cvEnc{
             Write-Host "  └─To: " -NoNewline
             Write-Host "$F2" -ForegroundColor:Yellow
             # 輸出檔案
-            $Content = (ReadContent $F1 $srcEnc)
-            if ($TrimFile) { $Content = TrimFile $Content }
-            if (!$Preview) { $Content|WriteContent $F2 $dstEnc }
+            if (!$Preview) {
+                ReadContent $F1 $srcEnc | 
+                WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile
+            }
         }
         Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
         # 開啟暫存目錄
