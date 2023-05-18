@@ -212,7 +212,9 @@ function cvEnc {
         [Parameter(ParameterSetName = "")]
         [switch] $Preview,
         [Parameter(ParameterSetName = "")]
-        [switch] $TrimFile
+        [switch] $TrimFile,
+        [Parameter(ParameterSetName = "")]
+        [switch] $LineWrite
     )
     # 獲取當前位置
     if ($PSScriptRoot) { $curDir = $PSScriptRoot } else { $curDir = (Get-Location).Path }
@@ -261,8 +263,12 @@ function cvEnc {
         Write-Host "$F2" -ForegroundColor:Yellow
         # 輸出檔案
         if (!$Preview) {
-            ReadContent $F1 $srcEnc | 
-            WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
+            if ($LineWrite) {
+                ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
+            } else {
+                $Content = ReadContent $F1 $srcEnc
+                $Content | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
+            }
         }
         # 開啟暫存目錄
         if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
@@ -287,8 +293,12 @@ function cvEnc {
             Write-Host "$F2" -ForegroundColor:Yellow
             # 輸出檔案
             if (!$Preview) {
-                ReadContent $F1 $srcEnc | 
-                WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
+                if ($LineWrite) {
+                    ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
+                } else {
+                    $Content = ReadContent $F1 $srcEnc
+                    $Content | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
+                }
             }
         }
         Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
