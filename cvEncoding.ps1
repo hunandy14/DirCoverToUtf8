@@ -87,7 +87,8 @@ function WriteContent {
         [switch] $AutoAppendEndLine, # 保持結尾至少有一行空白
         [switch] $ForceOneEndLine, # 修剪結尾空行
         [Parameter(ParameterSetName = "")]
-        [switch] $LF
+        [switch] $LF,
+        [switch] $RamBuffer
     )
     begin {
         # 處理編碼
@@ -131,6 +132,7 @@ function WriteContent {
         $StreamWriter = New-Object IO.StreamWriter($FileStream, $Enc)
         $emptyLines = 0
         $firstLine = $true
+        $buffer = ""
     }
     
     process {
@@ -151,11 +153,20 @@ function WriteContent {
                     $line = $LineTerminator + $line
                 } $emptyLines = 0
             }
-            $StreamWriter.Write($line)
+            # 寫入記憶體緩存
+            if ($RamBuffer) {
+                $buffer = $buffer + $line
+            } else {
+                $StreamWriter.Write($line)
+            }
         } else { $emptyLines++ }
     }
     
     end {
+        # 一次性寫入整個檔案
+        if ($RamBuffer) {
+            $StreamWriter.Write($buffer)
+        }
         # 保持結尾至少有一行空白
         if (($AutoAppendEndLine -and ($line -ne $LineTerminator)) -or ($emptyLines -gt 0)) {
             $StreamWriter.Write($LineTerminator)
@@ -181,7 +192,7 @@ function WriteContent {
 # ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8
 # ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -LF
 # ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -AutoAppendEndLine
-# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -TrimWhiteSpace
+# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -TrimWhiteSpace -RamBuffer
 
 
 
@@ -263,12 +274,7 @@ function cvEnc {
         Write-Host "$F2" -ForegroundColor:Yellow
         # 輸出檔案
         if (!$Preview) {
-            if ($LineWrite) {
-                ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
-            } else {
-                $Content = ReadContent $F1 $srcEnc
-                $Content | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
-            }
+            ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -RamBuffer:(!$LineWrite)
         }
         # 開啟暫存目錄
         if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
@@ -293,12 +299,7 @@ function cvEnc {
             Write-Host "$F2" -ForegroundColor:Yellow
             # 輸出檔案
             if (!$Preview) {
-                if ($LineWrite) {
-                    ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
-                } else {
-                    $Content = ReadContent $F1 $srcEnc
-                    $Content | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
-                }
+                ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -RamBuffer:(!$LineWrite)
             }
         }
         Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
