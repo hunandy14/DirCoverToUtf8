@@ -85,6 +85,7 @@ function WriteContent {
         [switch] $Append,
         [switch] $TrimWhiteSpace, # 清除行尾空白
         [switch] $AutoAppendEndLine, # 保持結尾至少有一行空白
+        [switch] $ForceOneEndLine, # 修剪結尾空行
         [Parameter(ParameterSetName = "")]
         [switch] $LF
     )
@@ -128,25 +129,37 @@ function WriteContent {
         # 建立 FileStream
         $FileStream = New-Object IO.FileStream($Path, $FileMode)
         $StreamWriter = New-Object IO.StreamWriter($FileStream, $Enc)
+        $emptyLines = 0
         $firstLine = $true
     }
     
     process {
+        $line = $InputObject
+        
         # 清除行尾空白
         if ($TrimWhiteSpace) {
-            $InputObject = $InputObject.TrimEnd()
+            $line = $line.TrimEnd()
         }
         # 追加換行(首行不換)
         if(-not $firstLine) {
-            $InputObject = $LineTerminator + $InputObject
+            $line = $LineTerminator + $line
         } else { $firstLine = $false }
         # 寫入檔案
-        $StreamWriter.Write($InputObject)
+        if ($line -notmatch "^\s*$" -or !$ForceOneEndLine) {
+            if ($emptyLines -gt 0) {
+                for ($i = 0; $i -lt $emptyLines; $i++) {
+                    $line = $LineTerminator + $line
+                } $emptyLines = 0
+            }
+            $StreamWriter.Write($line)
+        } else { $emptyLines++ }
     }
     
     end {
         # 保持結尾至少有一行空白
-        if ($AutoAppendEndLine -and ($InputObject -ne $LineTerminator)) { $StreamWriter.Write($LineTerminator) }
+        if (($AutoAppendEndLine -and ($line -ne $LineTerminator)) -or ($emptyLines -gt 0)) {
+            $StreamWriter.Write($LineTerminator)
+        }
         # 關閉檔案
         $StreamWriter.Close()
         $FileStream.Close()
@@ -249,7 +262,7 @@ function cvEnc {
         # 輸出檔案
         if (!$Preview) {
             ReadContent $F1 $srcEnc | 
-            WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile
+            WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
         }
         # 開啟暫存目錄
         if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
@@ -275,7 +288,7 @@ function cvEnc {
             # 輸出檔案
             if (!$Preview) {
                 ReadContent $F1 $srcEnc | 
-                WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile
+                WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile
             }
         }
         Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
