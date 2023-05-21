@@ -14,7 +14,8 @@ function ReadContent {
         [Parameter(Position = 1, ParameterSetName = "UTF8")]
         [switch] $UTF8,
         [Parameter(Position = 1, ParameterSetName = "UTF8BOM")]
-        [switch] $UTF8BOM
+        [switch] $UTF8BOM,
+        [switch] $ShowTimeTaken
     )
     
     begin {
@@ -44,8 +45,11 @@ function ReadContent {
     
     process {
         # 讀取檔案
-        while ($null -ne ($line = $StreamReader.ReadLine())) {
-            Write-Output $line
+        if ($ShowTimeTaken) { $stopwatch = [System.Diagnostics.Stopwatch]::StartNew() }
+        while ($line = $StreamReader.ReadLine()) {
+            $line
+        }
+        if ($ShowTimeTaken) { $stopwatch.Stop()
         }
     }
     
@@ -55,11 +59,30 @@ function ReadContent {
         if ([char]$StreamReader.Read() -eq "`n") { Write-Output "" }
         # 關閉檔案
         if ($null -ne $StreamReader) { $StreamReader.Dispose() }
+        # 顯示時間消耗
+        if ($ShowTimeTaken) {
+            $file = $path -replace '^(.*[\\/])'
+            $time = $stopwatch.Elapsed.TotalSeconds*1000
+            Write-Host "Elapsed time: $time milliseconds in ReadContent() for reading file '$file'"
+        }
     }
 }
 # ReadContent "enc\Encoding_SHIFT.txt" 932
 # ReadContent "enc\Encoding_UTF8_0.txt" UTF8
 # ReadContent "enc\Encoding_UTF8_1.txt" UTF8
+
+# function WriteContent2 {
+#     param (
+#         [Parameter(ValueFromPipeline, ParameterSetName = "")]
+#         [System.Object] $InputObject
+#     )
+# }
+# $CT = ReadContent "f001.data" 65001 -ShowTimeTaken
+# ReadContent "f001.data" 65001 -ShowTimeTaken | WriteContent2
+
+
+
+
 
 # 輸出檔案
 function WriteContent {
