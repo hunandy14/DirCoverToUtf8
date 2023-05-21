@@ -46,7 +46,7 @@ function ReadContent {
     process {
         # 讀取檔案
         if ($ShowTimeTaken) { $stopwatch = [System.Diagnostics.Stopwatch]::StartNew() }
-        while ($line = $StreamReader.ReadLine()) {
+        while ($null -ne ($line = $StreamReader.ReadLine())) {
             $line
         }
         if ($ShowTimeTaken) { $stopwatch.Stop() }
@@ -69,6 +69,7 @@ function ReadContent {
     }
 }
 # ReadContent "enc\Encoding_SHIFT.txt" 932
+# ReadContent "enc\Encoding_UTF8.txt" UTF8
 # ReadContent "enc\Encoding_UTF8_0.txt" UTF8
 # ReadContent "enc\Encoding_UTF8_1.txt" UTF8
 
@@ -104,7 +105,7 @@ function WriteContent {
         [Parameter(ParameterSetName = "")]
         [switch] $Append,
         [switch] $TrimWhiteSpace, # 清除行尾空白
-        [switch] $AutoAppendEndLine, # 保持結尾至少有一行空白
+        [switch] $EnsureOneEndLine, # 保持結尾至少有一行空白
         [switch] $ForceOneEndLine, # 修剪結尾空行
         [Parameter(ParameterSetName = "")]
         [switch] $LF,
@@ -147,53 +148,68 @@ function WriteContent {
         $StreamWriter = New-Object IO.StreamWriter($FileStream, $Enc)
         # 換行數
         $emptyLines = 0
-        $firstLine = $true
         # 計時開始
         if ($ShowTimeTaken) { $stopwatch = [System.Diagnostics.Stopwatch]::StartNew() }
     }
     
-    process {
-        $line = $InputObject
-        $str = ""
+    
+    # process { # 107/200
+    #     $StreamWriter.WriteLine($InputObject)
+    # }
+    
+    process { # 125/290
         # 清除行尾空白
-        if ($TrimWhiteSpace) {
-            $line = $line.TrimEnd()
-        }
-        # 追加換行(首行不換)
-        if(-not $firstLine) {
-            $str = $str + $LineTerminator
-        } else { $firstLine = $false }
+        if ($TrimWhiteSpace) { $InputObject = $InputObject.TrimEnd() }
         # 寫入檔案 (遇到非空白行時)
-        if ($line -notmatch "^\s*$" -or !$ForceOneEndLine) {
-            if ($emptyLines -gt 0) {
-                for ($i = 0; $i -lt $emptyLines; $i++) {
-                    # Write-Host "BB="
-                    $str = $str + $LineTerminator
-                    # $StreamWriter.Write($LineTerminator)
-                } $emptyLines = 0
-            }
-            # 寫入記憶體緩存
-            # $StreamWriter.Write($line)
-            $StreamWriter.Write($str+$line)
-        } else {
-            $emptyLines += 1
+        if ($InputObject) {
+            $StreamWriter.Write($LineTerminator*$emptyLines)
+            $StreamWriter.Write($InputObject); $emptyLines = 0
         }
-        
-        
-        # Write-Host "AA=" -NoNewline
-        # Write-Host $line
-        # 第二行開始追加換行
-        # $emptyLines += 1
-        # $StreamWriter.WriteLine($InputObject)
+        $emptyLines += 1
     }
+    
+    # process { #164/290
+    #     $line = $InputObject
+    #     # $str = "" # BBB
+    #     # 清除行尾空白
+    #     if ($TrimWhiteSpace) {
+    #         $line = $line.TrimEnd()
+    #     }
+    #     # 追加換行(首行不換)
+    #     if(-not $firstLine) {
+    #         # $str = $str + $LineTerminator # BBB# AAA
+    #         $StreamWriter.Write($LineTerminator) 
+    #     } else { $firstLine = $false }
+    #     # # 寫入檔案 (遇到非空白行時)
+    #     if ($line -notmatch "^\s*$" -or !$ForceOneEndLine) {
+    #         if ($emptyLines -gt 0) {
+    #             for ($i = 0; $i -lt $emptyLines; $i++) {
+    #                 # $str = $str + $LineTerminator # BBB
+    #                 $StreamWriter.Write($LineTerminator) # AAA
+    #             } $emptyLines = 0
+    #         }
+    #         # 寫入記憶體緩存
+    #         # $StreamWriter.Write($str) # BBB
+    #         # $StreamWriter.Write($line) # BBB 平均::174
+    #         $StreamWriter.Write($line) # AAA 平均::161
+    #     } else {
+    #         $emptyLines += 1
+    #     }
+        
+    #     # $StreamWriter.WriteLine($InputObject)
+    # }
     
     end {
         if ($ShowTimeTaken) { $stopwatch.Stop() }
-        
         # 保持結尾至少有一行空白
-        if (($AutoAppendEndLine -and ($InputObject -ne $LineTerminator)) -or ($emptyLines -gt 0)) {
-            $StreamWriter.Write($LineTerminator)
-        }
+        # if (($AutoAppendEndLine -and ($InputObject -ne $LineTerminator)) -or ($emptyLines -gt 0)) {
+        #     $StreamWriter.Write($LineTerminator)
+        # }
+        
+        # 輸出剩餘的換行 
+        $emptyLines -= 1
+        if ($ForceOneEndLine -or ($EnsureOneEndLine -and $emptyLines -eq 0)) { $emptyLines = 1 }
+        $StreamWriter.Write($LineTerminator*$emptyLines); $emptyLines = 0
         
         # 關閉檔案
         $StreamWriter.Close()
@@ -202,7 +218,7 @@ function WriteContent {
         # 顯示時間消耗
         if ($ShowTimeTaken) {
             $file = $path -replace '^(.*[\\/])'
-            $time = $stopwatch.Elapsed.TotalSeconds*1000
+            $script:time = $stopwatch.Elapsed.TotalSeconds*1000
             Write-Host "Elapsed time: " -NoNewline
             Write-Host $time -NoNewline -ForegroundColor Yellow
             Write-Host " milliseconds in ReadContent() for reading file '$file'"
@@ -223,150 +239,37 @@ function WriteContent {
 # @("1行空格測試`r`n")|WriteContent "out\Out12.txt" -UTF8BOM
 # @("2行空格測試", "", "")|WriteContent "out\Out13.txt" -UTF8BOM
 # @("2行空格測試", "`r`n")|WriteContent "out\Out13.txt" -UTF8BOM -ShowTimeTaken
+
+# @"
+# 2行空格測試
+
+
+# 123
+
+
+
+# 33
+# "@ | WriteContent "out\Out13.txt" -UTF8BOM
 ## 組合測試
 
-# $ct = ReadContent "f001.data" 65001
 
+# 跑分測試
+# $ct = ReadContent "f001.data" 65001 -ShowTimeTaken
 # $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-# $ct|WriteContent "out\file1.data" -UTF8 -ShowTimeTaken
+# $tt = 0
+# $cc = 20
+# for ($i = 0; $i -lt $cc; $i++) {
+#     $ct|WriteContent "R:\file1.data" -UTF8 -ShowTimeTaken
+#     $tt += $time
+# } 
+# Write-Host "平均:" $($tt/$cc)
 
-# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -LF
+# 空行缺失測試
+# $CT = ReadContent "enc\Encoding_UTF8.txt" 65001 -ShowTimeTaken
+# $CT | WriteContent "R:\Out21.txt" -UTF8 
+
 # ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -AutoAppendEndLine
 # Write-Host "Time for WriteContent writing: $($stopwatch.Elapsed.TotalSeconds*1000)m seconds"
-
-
-
-
-
-# 輸出檔案
-function WriteContent {
-    [CmdletBinding(DefaultParameterSetName = "Encoding")]
-    param (
-        # 輸出路徑
-        [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
-        [string] $Path,
-        [Parameter(ValueFromPipeline, ParameterSetName = "")]
-        [System.Object] $InputObject,
-        # 編碼處理
-        [Parameter(Position = 1, ParameterSetName = "Encoding")]
-        [object] $Encoding,
-        [Parameter(Position = 1, ParameterSetName = "UTF8")]
-        [switch] $UTF8,
-        [Parameter(Position = 1, ParameterSetName = "UTF8BOM")]
-        [switch] $UTF8BOM,
-        # 輸出參數
-        [Parameter(ParameterSetName = "")]
-        [switch] $Append,
-        [switch] $TrimWhiteSpace, # 清除行尾空白
-        [switch] $AutoAppendEndLine, # 保持結尾至少有一行空白
-        [switch] $ForceOneEndLine, # 修剪結尾空行
-        [Parameter(ParameterSetName = "")]
-        [switch] $LF,
-        [switch] $RamBuffer
-    )
-    begin {
-        # 處理編碼
-        if ($Encoding) { # 自訂編碼
-            if ($Encoding -is [Text.Encoding]) {
-                $Enc = $Encoding
-            } else { $Enc = Get-Encoding $Encoding }
-        } else { # 預選項編碼
-            if ($UTF8) {
-                $Enc = New-Object System.Text.UTF8Encoding $False
-            } elseif ($UTF8BOM) {
-                $Enc = New-Object System.Text.UTF8Encoding $True
-            } else { # 系統語言
-                if (!$__SysEnc__) { $Script:__SysEnc__ = [Text.Encoding]::GetEncoding((powershell -nop "([Text.Encoding]::Default).WebName")) }
-                $Enc = $__SysEnc__
-            }
-        }
-        # 換行符號
-        if (-not $LF) {
-            $LineTerminator = "`r`n"
-        } else { $LineTerminator = "`n" }
-        
-        # 修復路徑
-        [IO.Directory]::SetCurrentDirectory(((Get-Location -PSProvider FileSystem).ProviderPath))
-        $Path = [IO.Path]::GetFullPath($Path)
-        
-        # 檢查路徑是否為資料夾
-        if (Test-Path -PathType:Container $Path) {
-            Write-Error "The Path `"$Path`" cannot be a folder"; break
-        }
-        # 檔案不存在新增空檔
-        if (!(Test-Path $Path)) {
-            New-Item $Path -ItemType:File -Force | Out-Null
-        }
-        
-        # 根據 $Append 參數決定 FileMode
-        $FileMode = $Append ? [IO.FileMode]::Append : [IO.FileMode]::Create
-
-        # 建立 FileStream
-        $FileStream = New-Object IO.FileStream($Path, $FileMode)
-        $StreamWriter = New-Object IO.StreamWriter($FileStream, $Enc)
-        $emptyLines = 0
-        $firstLine = $true
-        $buffer = ""
-    }
-    
-    process {
-        $line = $InputObject
-        
-        # 清除行尾空白
-        if ($TrimWhiteSpace) {
-            $line = $line.TrimEnd()
-        }
-        # 追加換行(首行不換)
-        if(-not $firstLine) {
-            $line = $LineTerminator + $line
-        } else { $firstLine = $false }
-        # 寫入檔案
-        if ($line -notmatch "^\s*$" -or !$ForceOneEndLine) {
-            if ($emptyLines -gt 0) {
-                for ($i = 0; $i -lt $emptyLines; $i++) {
-                    $line = $LineTerminator + $line
-                } $emptyLines = 0
-            }
-            # 寫入記憶體緩存
-            if ($RamBuffer) {
-                $buffer = $buffer + $line
-            } else {
-                $StreamWriter.Write($line)
-            }
-        } else { $emptyLines++ }
-    }
-    
-    end {
-        # 一次性寫入整個檔案
-        if ($RamBuffer) {
-            $StreamWriter.Write($buffer)
-        }
-        # 保持結尾至少有一行空白
-        if (($AutoAppendEndLine -and ($line -ne $LineTerminator)) -or ($emptyLines -gt 0)) {
-            $StreamWriter.Write($LineTerminator)
-        }
-        # 關閉檔案
-        $StreamWriter.Close()
-        $FileStream.Close()
-    }
-}
-## 種編碼讀寫範例
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt"
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out2.txt" big5
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out3.txt" UTF8
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out4.txt" -UTF8BOM
-# "あいうえお日本語の入力テスト                  "|WriteContent "out\Out5.txt" 932
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt" -Append
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\new\Out1.txt" -Append
-## 結尾空行測試
-# "0行空格測試"|WriteContent "out\Out11.txt" -UTF8BOM
-# @("1行空格測試", "")|WriteContent "out\Out12.txt" -UTF8BOM
-# @("2行空格測試", "", "")|WriteContent "out\Out13.txt" -UTF8BOM
-## 組合測試
-# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8
-# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -LF
-# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -AutoAppendEndLine
-# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -TrimWhiteSpace -RamBuffer
 
 
 
