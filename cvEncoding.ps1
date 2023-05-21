@@ -33,36 +33,33 @@ function ReadContent {
                 $Enc = $__SysEnc__
             }
         }
-        
         # 檢查檔案
-        if ($Path -and (Test-Path -PathType:Leaf $Path)) {
-            [IO.Directory]::SetCurrentDirectory(((Get-Location -PSProvider FileSystem).ProviderPath))
-            $Path = [IO.Path]::GetFullPath($Path)
-        } else { Write-Error "Input file `"$Path`" does not exist" -ErrorAction:Stop }
+        if ($Path) {
+            $Path = [IO.Path]::GetFullPath([IO.Path]::Combine((Get-Location -PSProvider FileSystem).ProviderPath, $Path))
+            if (!(Test-Path -PathType:Leaf -Path $Path)) { Write-Error "Input file `"$Path`" does not exist" -ErrorAction:Stop }
+        }
         # 開啟檔案
-        $reader = New-Object System.IO.StreamReader($Path, $Enc)
+        $StreamReader = New-Object System.IO.StreamReader($Path, $Enc)
     }
     
     process {
         # 讀取檔案
-        while ($null -ne ($line = $reader.ReadLine())) {
+        while ($null -ne ($line = $StreamReader.ReadLine())) {
             Write-Output $line
         }
     }
     
     end {
         # 補償結尾換行
-        $reader.BaseStream.Position -= 1
-        if ([char]$reader.Read() -eq "`n") { "" }
+        $StreamReader.BaseStream.Position -= 1
+        if ([char]$StreamReader.Read() -eq "`n") { Write-Output "" }
         # 關閉檔案
-        if ($null -ne $reader) {
-            $reader.Dispose()
-        }
+        if ($null -ne $StreamReader) { $StreamReader.Dispose() }
     }
 }
-# ReadContent "enc\Encoding_SHIFT.txt" 932 
-# ReadContent "enc\Encoding_UTF8.txt" UTF8
-# TrimFile (ReadContent "enc\Encoding_UTF8.txt" 65001)
+# ReadContent "enc\Encoding_SHIFT.txt" 932
+# ReadContent "enc\Encoding_UTF8_0.txt" UTF8
+# ReadContent "enc\Encoding_UTF8_1.txt" UTF8
 
 # 輸出檔案
 function WriteContent {
