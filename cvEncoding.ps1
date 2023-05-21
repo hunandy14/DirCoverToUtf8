@@ -55,7 +55,7 @@ function ReadContent {
     end {
         # 補償結尾換行
         $StreamReader.BaseStream.Position -= 1
-        if ([char]$StreamReader.Read() -eq "`n") { Write-Output "" }
+        if ([char]$StreamReader.Read() -eq "`n") { "" }
         # 關閉檔案
         if ($null -ne $StreamReader) { $StreamReader.Dispose() }
         # 顯示時間消耗
@@ -250,8 +250,12 @@ function WriteContent {
 
 # 33
 # "@ | WriteContent "out\Out13.txt" -UTF8BOM
-## 組合測試
-
+## 組合測試 230
+# $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+# ReadContent "f001.data" 65001 | WriteContent "R:\file1.data" -UTF8
+# $stopwatch.Stop()
+# $time = $stopwatch.Elapsed.TotalSeconds*1000
+# Write-Host "Elapsed time: $time milliseconds"
 
 # 跑分測試
 # $ct = ReadContent "f001.data" 65001 -ShowTimeTaken
@@ -300,9 +304,7 @@ function cvEnc {
         [Parameter(ParameterSetName = "")]
         [switch] $Preview,
         [Parameter(ParameterSetName = "")]
-        [switch] $TrimFile,
-        [Parameter(ParameterSetName = "")]
-        [switch] $LineWrite
+        [switch] $TrimFile
     )
     # 獲取當前位置
     if ($PSScriptRoot) { $curDir = $PSScriptRoot } else { $curDir = (Get-Location).Path }
@@ -351,7 +353,33 @@ function cvEnc {
         Write-Host "$F2" -ForegroundColor:Yellow
         # 輸出檔案
         if (!$Preview) {
-            ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -RamBuffer:(!$LineWrite)
+            $StreamReader = New-Object System.IO.StreamReader($F1, [Text.Encoding]::GetEncoding($srcEnc))
+            $StreamWriter = New-Object System.IO.StreamWriter($F2, $false, [Text.Encoding]::GetEncoding($dstEnc))
+            $LineTerminator = if ($LF) { "`n" } else { "`r`n" }
+            $emptyLines = 0
+            while ($null -ne ($line = $StreamReader.ReadLine())) {
+                # 清除行尾空白
+                if ($TrimFile) { $line = $line.TrimEnd() }
+                # 寫入檔案 (遇到非空白行時)
+                if ($line) {
+                    $StreamWriter.Write($LineTerminator*$emptyLines)
+                    $StreamWriter.Write($line); $emptyLines = 0
+                }
+                $emptyLines += 1
+            }
+            # 補償結尾換行
+            $StreamReader.BaseStream.Position -= 1
+            if ([char]$StreamReader.Read() -eq "`n") { $emptyLines += 1 }
+            # 輸出剩餘的換行 
+            $emptyLines -= 1
+            if ($ForceOneEndLine -or ($EnsureOneEndLine -and $emptyLines -eq 0)) { $emptyLines = 1 }
+            $StreamWriter.Write($LineTerminator*$emptyLines); $emptyLines = 0
+            # 關閉檔案
+            $StreamReader.Close()
+            $StreamWriter.Close()
+            
+            # 測試用呼叫單獨函式
+            # ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -ShowTimeTaken
         }
         # 開啟暫存目錄
         if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
@@ -376,7 +404,33 @@ function cvEnc {
             Write-Host "$F2" -ForegroundColor:Yellow
             # 輸出檔案
             if (!$Preview) {
-                ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -AutoAppendEndLine:$TrimFile -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -RamBuffer:(!$LineWrite)
+                $StreamReader = New-Object System.IO.StreamReader($F1, [Text.Encoding]::GetEncoding($srcEnc))
+                $StreamWriter = New-Object System.IO.StreamWriter($F2, $false, [Text.Encoding]::GetEncoding($dstEnc))
+                $LineTerminator = if ($LF) { "`n" } else { "`r`n" }
+                $emptyLines = 0
+                while ($null -ne ($line = $StreamReader.ReadLine())) {
+                    # 清除行尾空白
+                    if ($TrimFile) { $line = $line.TrimEnd() }
+                    # 寫入檔案 (遇到非空白行時)
+                    if ($line) {
+                        $StreamWriter.Write($LineTerminator*$emptyLines)
+                        $StreamWriter.Write($line); $emptyLines = 0
+                    }
+                    $emptyLines += 1
+                }
+                # 補償結尾換行
+                $StreamReader.BaseStream.Position -= 1
+                if ([char]$StreamReader.Read() -eq "`n") { $emptyLines += 1 }
+                # 輸出剩餘的換行 
+                $emptyLines -= 1
+                if ($ForceOneEndLine -or ($EnsureOneEndLine -and $emptyLines -eq 0)) { $emptyLines = 1 }
+                $StreamWriter.Write($LineTerminator*$emptyLines); $emptyLines = 0
+                # 關閉檔案
+                $StreamReader.Close()
+                $StreamWriter.Close()
+                
+                # 測試用呼叫單獨函式
+                # ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -ShowTimeTaken
             }
         }
         Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
@@ -419,4 +473,11 @@ function cvEnc {
     # 預選編碼測試
     # cvEnc "enc\Encoding_UTF8.txt" -ConvertToUTF8 -Temp
     # cvEnc "enc\Encoding_BIG5.txt" -ConvertToSystem -Temp
+    
+    # $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    # cvEnc "f001.data" "R:\file1.data" 65001 65001
+    # # cvEnc "enc\Encoding_UTF8.txt" "R:\file1.data" 65001 65001 -BufferedWrite
+    # $stopwatch.Stop()
+    
+    # Write-Host "Time for buffered2 writing: $($stopwatch.Elapsed.TotalSeconds*1000)m seconds"     # ReadToEnd
 # } __Test_cvEnc__
