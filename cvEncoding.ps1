@@ -49,8 +49,7 @@ function ReadContent {
         while ($line = $StreamReader.ReadLine()) {
             $line
         }
-        if ($ShowTimeTaken) { $stopwatch.Stop()
-        }
+        if ($ShowTimeTaken) { $stopwatch.Stop() }
     }
     
     end {
@@ -63,7 +62,9 @@ function ReadContent {
         if ($ShowTimeTaken) {
             $file = $path -replace '^(.*[\\/])'
             $time = $stopwatch.Elapsed.TotalSeconds*1000
-            Write-Host "Elapsed time: $time milliseconds in ReadContent() for reading file '$file'"
+            Write-Host "Elapsed time: " -NoNewline
+            Write-Host $time -NoNewline -ForegroundColor Yellow
+            Write-Host " milliseconds in ReadContent() for reading file '$file'"
         }
     }
 }
@@ -79,6 +80,159 @@ function ReadContent {
 # }
 # $CT = ReadContent "f001.data" 65001 -ShowTimeTaken
 # ReadContent "f001.data" 65001 -ShowTimeTaken | WriteContent2
+
+
+
+
+# 輸出檔案
+function WriteContent {
+    [CmdletBinding(DefaultParameterSetName = "Encoding")]
+    param (
+        # 輸出路徑
+        [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
+        [string] $Path,
+        [Parameter(ValueFromPipeline, ParameterSetName = "")]
+        [System.Object] $InputObject,
+        # 編碼處理
+        [Parameter(Position = 1, ParameterSetName = "Encoding")]
+        [object] $Encoding,
+        [Parameter(Position = 1, ParameterSetName = "UTF8")]
+        [switch] $UTF8,
+        [Parameter(Position = 1, ParameterSetName = "UTF8BOM")]
+        [switch] $UTF8BOM,
+        # 輸出參數
+        [Parameter(ParameterSetName = "")]
+        [switch] $Append,
+        [switch] $TrimWhiteSpace, # 清除行尾空白
+        [switch] $AutoAppendEndLine, # 保持結尾至少有一行空白
+        [switch] $ForceOneEndLine, # 修剪結尾空行
+        [Parameter(ParameterSetName = "")]
+        [switch] $LF,
+        [switch] $ShowTimeTaken
+    )
+    begin {
+        # 處理編碼
+        if ($Encoding) { # 自訂編碼
+            if ($Encoding -is [Text.Encoding]) {
+                $Enc = $Encoding
+            } else { $Enc = Get-Encoding $Encoding }
+        } else { # 預選項編碼
+            if ($UTF8) {
+                $Enc = New-Object System.Text.UTF8Encoding $False
+            } elseif ($UTF8BOM) {
+                $Enc = New-Object System.Text.UTF8Encoding $True
+            } else { # 系統語言
+                if (!$__SysEnc__) { $Script:__SysEnc__ = [Text.Encoding]::GetEncoding((powershell -nop "([Text.Encoding]::Default).WebName")) }
+                $Enc = $__SysEnc__
+            }
+        }
+        # 檢查路徑
+        if ($Path) {
+            $Path = [IO.Path]::GetFullPath([IO.Path]::Combine((Get-Location -PSProvider FileSystem).ProviderPath, $Path))
+            # 檢查路徑是否為資料夾
+            if (Test-Path -PathType:Container -Path $Path) {
+                Write-Error "The Path `"$Path`" cannot be a folder"; break
+            }
+            # 檔案不存在新增空檔
+            if (!(Test-Path -Path $Path)) {
+                New-Item $Path -ItemType:File -Force | Out-Null
+            }
+        }
+        # 換行符號
+        $LineTerminator = if ($LF) { "`n" } else { "`r`n" }
+        # FileMode 參數
+        $FileMode = if ($Append) { [IO.FileMode]::Append } else { [IO.FileMode]::Create }
+        # 建立 Stream
+        $FileStream = New-Object IO.FileStream($Path, $FileMode)
+        $StreamWriter = New-Object IO.StreamWriter($FileStream, $Enc)
+        # 換行數
+        $emptyLines = 0
+        $firstLine = $true
+        # 計時開始
+        if ($ShowTimeTaken) { $stopwatch = [System.Diagnostics.Stopwatch]::StartNew() }
+    }
+    
+    process {
+        $line = $InputObject
+        $str = ""
+        # 清除行尾空白
+        if ($TrimWhiteSpace) {
+            $line = $line.TrimEnd()
+        }
+        # 追加換行(首行不換)
+        if(-not $firstLine) {
+            $str = $str + $LineTerminator
+        } else { $firstLine = $false }
+        # 寫入檔案 (遇到非空白行時)
+        if ($line -notmatch "^\s*$" -or !$ForceOneEndLine) {
+            if ($emptyLines -gt 0) {
+                for ($i = 0; $i -lt $emptyLines; $i++) {
+                    # Write-Host "BB="
+                    $str = $str + $LineTerminator
+                    # $StreamWriter.Write($LineTerminator)
+                } $emptyLines = 0
+            }
+            # 寫入記憶體緩存
+            # $StreamWriter.Write($line)
+            $StreamWriter.Write($str+$line)
+        } else {
+            $emptyLines += 1
+        }
+        
+        
+        # Write-Host "AA=" -NoNewline
+        # Write-Host $line
+        # 第二行開始追加換行
+        # $emptyLines += 1
+        # $StreamWriter.WriteLine($InputObject)
+    }
+    
+    end {
+        if ($ShowTimeTaken) { $stopwatch.Stop() }
+        
+        # 保持結尾至少有一行空白
+        if (($AutoAppendEndLine -and ($InputObject -ne $LineTerminator)) -or ($emptyLines -gt 0)) {
+            $StreamWriter.Write($LineTerminator)
+        }
+        
+        # 關閉檔案
+        $StreamWriter.Close()
+        $FileStream.Close()
+        
+        # 顯示時間消耗
+        if ($ShowTimeTaken) {
+            $file = $path -replace '^(.*[\\/])'
+            $time = $stopwatch.Elapsed.TotalSeconds*1000
+            Write-Host "Elapsed time: " -NoNewline
+            Write-Host $time -NoNewline -ForegroundColor Yellow
+            Write-Host " milliseconds in ReadContent() for reading file '$file'"
+        }
+    }
+}
+## 種編碼讀寫範例
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt"
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out2.txt" big5
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out3.txt" UTF8
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out4.txt" -UTF8BOM
+# "あいうえお日本語の入力テスト                  "|WriteContent "out\Out5.txt" 932
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt" -Append
+# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\new\Out1.txt" -Append
+## 結尾空行測試
+# "0行空格測試"|WriteContent "out\Out11.txt" -UTF8BOM
+# @("1行空格測試", "")|WriteContent "out\Out12.txt" -UTF8BOM
+# @("1行空格測試`r`n")|WriteContent "out\Out12.txt" -UTF8BOM
+# @("2行空格測試", "", "")|WriteContent "out\Out13.txt" -UTF8BOM
+# @("2行空格測試", "`r`n")|WriteContent "out\Out13.txt" -UTF8BOM -ShowTimeTaken
+## 組合測試
+
+# $ct = ReadContent "f001.data" 65001
+
+# $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+# $ct|WriteContent "out\file1.data" -UTF8 -ShowTimeTaken
+
+# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -LF
+# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -AutoAppendEndLine
+# Write-Host "Time for WriteContent writing: $($stopwatch.Elapsed.TotalSeconds*1000)m seconds"
 
 
 
