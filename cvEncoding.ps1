@@ -277,21 +277,6 @@ function WriteContent {
 
 
 
-# 獲取路徑型態
-function Get-PathType {
-    param (
-        [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
-        [string] $Path
-    )
-    # 檢測路徑
-    if ((Test-Path -Path $path -PathType Container)) {
-        $Type = "Container"
-    } elseif ((Test-Path -Path $path -PathType Leaf)) {
-        $Type = "Leaf"
-    } else { return $null }
-    return $Type
-} # Get-PathType "R:\AAA.txt"
-
 # 獲取檔案項目
 function Get-FilePathItem {
     param (
@@ -303,25 +288,28 @@ function Get-FilePathItem {
         [Parameter(ParameterSetName = "")]
         [array] $Include
     )
-
-    # 檢測路徑
-    if (!(Test-Path -Path $Path)) { return }
-    
     # 獲取檔案並透過管道進行過濾
-    Get-ChildItem -Path $Path -Include $Include -Recurse -File |
-        ForEach-Object {
-            # 過濾檔案路徑
-            if ($MatchPath -and $_.FullName -notmatch $MatchPath) {
-                return
+    if (Test-Path -Path $Path -PathType Leaf) {
+        Get-Item $Path
+    } elseif (Test-Path -Path $Path -PathType Container) {
+        Get-ChildItem -Path $Path -Include $Include -Recurse -File |
+            ForEach-Object {
+                # 過濾檔案路徑
+                if ($MatchPath -and $_.FullName -notmatch $MatchPath) {
+                    return
+                }
+                if ($NotMatchPath -and $_.FullName -match $NotMatchPath) {
+                    return
+                }
+                # 輸出符合條件的物件
+                $_
             }
-            if ($NotMatchPath -and $_.FullName -match $NotMatchPath) {
-                return
-            }
-
-            # 輸出符合條件的物件
-            $_
-        }
+    } else {
+        return
+    }
 } # (Get-FilePathItem "R:\AAA" -NotMatchPath "CCC").FullName
+
+
 
 # 獲取相對路徑
 function Convert-ToRelativePath {
@@ -339,7 +327,6 @@ function Convert-ToRelativePath {
     }
 } # ((Get-FilePathItem "R:\AAA").FullName) | Convert-ToRelativePath
 # ((Get-FilePathItem "old").FullName) | Convert-ToRelativePath
-
 
 
 
@@ -370,6 +357,7 @@ function cvEnc {
         [Parameter(ParameterSetName = "")]
         [switch] $TrimFile
     )
+    
     # 獲取當前位置
     if ($PSScriptRoot) { $curDir = $PSScriptRoot } else { $curDir = (Get-Location).Path }
     # 輸出位置為空時自動指定到暫存目錄
@@ -381,6 +369,7 @@ function cvEnc {
             (Get-ChildItem "$dstPath" -Recurse) | Move-Item -Destination:$dstPath_bk -Force
         }
     }
+    
     # 編碼名稱
     if (!$__SysEnc__) { $Script:__SysEnc__ = [Text.Encoding]::GetEncoding((powershell -nop "([Text.Encoding]::Default).WebName")) }
     if ($ConvertToUTF8) {
@@ -400,30 +389,46 @@ function cvEnc {
     if (!$srcEncName -or !$dstEncName) { Write-Error "[錯誤]:: 編碼輸入有誤, 檢查是否打錯號碼了" -ErrorAction Stop}
     
     
-    # 檔案來源
-    Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
-
-    if (Test-Path $srcPath -PathType:Leaf) { # 輸入的路徑為檔案
-        if ($Temp) { $dstPath = "$dstPath\" + (Get-Item $srcPath).Name }
-        if (Test-Path $dstPath -PathType:Container){
-            Write-Error "[錯誤]:: `$dstPath=$dstPath 是資料夾, 必須為檔案或空路徑" -ErrorAction Stop
-        }
-        # 輸出路徑
-        $F1 = (Get-Item $srcPath).FullName
-        $F2 = $dstPath
+    
+    # 檢查 $srcPath 是否存在
+    if (!(Test-Path -Path $srcPath)) { Write-Error "錯誤: $srcPath 路徑不存在" -EA:Stop }
+    # 檢查 $srcPath 和 $dstPath 參數
+    $srcPathType = if (Test-Path -Path $srcPath -PathType Leaf) {"File"} else {"Directory"}
+    $dstPathType = if (Test-Path -Path $dstPath -PathType Leaf) {"File"} elseif (Test-Path -Path $dstPath -PathType Container) {"Directory"} else { if ($dstPath -match '\.\w+$') {"File"} else {"Directory"} }
+    # 如果 $srcPath 是目錄，而 $dstPath 是文件，則輸出錯誤並停止執行
+    if ($srcPathType -eq "Directory" -and $dstPathType -eq "File") {
+        Write-Error "錯誤: 無法將資料夾複製到檔案中" -ErrorAction Stop
+    }
+    # 如果 $srcPath 是文件，而 $dstPath 是目錄，則修改 $dstPath 並將 $dstPathType 設置為 "File"
+    if ($srcPathType -eq "File" -and $dstPathType -eq "Directory") {
+        $dstPath = Join-Path -Path $dstPath -ChildPath ($srcPath -replace '^(.*[\\/])')
+        $dstPathType = "File"
+    }
+    
+    
+    
+    # 開始轉換檔案
+    $TrimWhiteSpace = $ForceOneEndLine = $TrimFile
+    Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]") -ForegroundColor DarkGreen
+    foreach ($_ in (Get-FilePathItem $srcPath).FullName) {
+        # 獲取路徑
+        $F1 = $_
+        $F2 = if ($dstPathType -eq "File") { $dstPath } else { Join-Path $dstPath ([System.IO.Path]::GetRelativePath($srcPath, $_)) }
+        # 輸出信息
         Write-Host "  From: " -NoNewline
         Write-Host "$F1" -ForegroundColor:White
         Write-Host "  └─To: " -NoNewline
         Write-Host "$F2" -ForegroundColor:Yellow
         # 輸出檔案
         if (!$Preview) {
+            if (!(Test-Path -Path $F2)) { New-Item -ItemType:File $F2 -Force | Out-Null }
             $StreamReader = New-Object System.IO.StreamReader($F1, [Text.Encoding]::GetEncoding($srcEnc))
             $StreamWriter = New-Object System.IO.StreamWriter($F2, $false, [Text.Encoding]::GetEncoding($dstEnc))
             $LineTerminator = if ($LF) { "`n" } else { "`r`n" }
             $emptyLines = 0
             while ($null -ne ($line = $StreamReader.ReadLine())) {
                 # 清除行尾空白
-                if ($TrimFile) { $line = $line.TrimEnd() }
+                if ($TrimWhiteSpace) { $line = $line.TrimEnd() }
                 # 寫入檔案 (遇到非空白行時)
                 if ($line) {
                     $StreamWriter.Write($LineTerminator*$emptyLines)
@@ -447,65 +452,13 @@ function cvEnc {
         }
         # 開啟暫存目錄
         if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
-        return
-    } elseif (Test-Path $srcPath -PathType:Container) { # 輸入的路徑為資料夾
-        if (Test-Path $dstPath -PathType:Leaf){
-            Write-Error "[錯誤]:: `$dstPath=$dstPath 是檔案, 必須為資料夾或空路徑"
-            return
-        }
-        $collection = Get-ChildItem $srcPath -Recurse -Include:$Filter
-        foreach ($item in $collection) {
-            # 獲取相對路徑
-            Set-Location $srcPath;
-            $rela = ($item|Resolve-Path -Relative) -replace("\.\\", "")
-            Set-Location $curDir
-            # 輸出路徑
-            $F1=$item.FullName
-            $F2=$dstPath.TrimEnd('\') + "\$rela"
-            Write-Host "  From: " -NoNewline
-            Write-Host "$rela" -ForegroundColor:White
-            Write-Host "  └─To: " -NoNewline
-            Write-Host "$F2" -ForegroundColor:Yellow
-            # 輸出檔案
-            if (!$Preview) {
-                $StreamReader = New-Object System.IO.StreamReader($F1, [Text.Encoding]::GetEncoding($srcEnc))
-                $StreamWriter = New-Object System.IO.StreamWriter($F2, $false, [Text.Encoding]::GetEncoding($dstEnc))
-                $LineTerminator = if ($LF) { "`n" } else { "`r`n" }
-                $emptyLines = 0
-                while ($null -ne ($line = $StreamReader.ReadLine())) {
-                    # 清除行尾空白
-                    if ($TrimFile) { $line = $line.TrimEnd() }
-                    # 寫入檔案 (遇到非空白行時)
-                    if ($line) {
-                        $StreamWriter.Write($LineTerminator*$emptyLines)
-                        $StreamWriter.Write($line); $emptyLines = 0
-                    }
-                    $emptyLines += 1
-                }
-                # 補償結尾換行
-                $StreamReader.BaseStream.Position -= 1
-                if ([char]$StreamReader.Read() -eq "`n") { $emptyLines += 1 }
-                # 輸出剩餘的換行 
-                $emptyLines -= 1
-                if ($ForceOneEndLine -or ($EnsureOneEndLine -and $emptyLines -eq 0)) { $emptyLines = 1 }
-                $StreamWriter.Write($LineTerminator*$emptyLines); $emptyLines = 0
-                # 關閉檔案
-                $StreamReader.Close()
-                $StreamWriter.Close()
-                
-                # 測試用呼叫單獨函式
-                # ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -ShowTimeTaken
-            }
-        }
-        Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]")
-        # 開啟暫存目錄
-        if ($Temp) { explorer $dstPath }
-        return
-    }
-    else {
-        Write-Error "[錯誤]:: `$srcPath=$srcPath 該路徑有誤"; -ErrorAction Stop
     }
 }
+
+# cvEnc ".\file1.txt" "R:\cvEnd" 932 65001
+# cvEnc ".\file1.txt" "R:\cvEnd\file1.txt" 932 65001
+# cvEnc "enc" "R:\cvEnd\enc" 932 65001
+# cvEnc "enc" "R:\cvEnd\file1.txt" 932 65001
 
 # function __Test_cvEnc__ {
     # 轉換相對路徑資料測試
@@ -539,7 +492,7 @@ function cvEnc {
     # cvEnc "enc\Encoding_BIG5.txt" -ConvertToSystem -Temp
     
     # $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    # cvEnc "f001.data" "R:\file1.data" 65001 65001
+    # cvEnc "f001.data" "R:\file1.data" 65001 65001                                                 # 250
     # cvEnc "enc\Encoding_UTF8.txt" "R:\file1.data" 65001 65001 -BufferedWrite
     # $stopwatch.Stop()
     # Write-Host "Time for buffered2 writing: $($stopwatch.Elapsed.TotalSeconds*1000)m seconds"     # ReadToEnd
