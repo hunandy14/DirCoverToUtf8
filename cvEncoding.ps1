@@ -277,6 +277,70 @@ function WriteContent {
 
 
 
+# 獲取路徑型態
+function Get-PathType {
+    param (
+        [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
+        [string] $Path
+    )
+    # 檢測路徑
+    if ((Test-Path -Path $path -PathType Container)) {
+        $Type = "Container"
+    } elseif ((Test-Path -Path $path -PathType Leaf)) {
+        $Type = "Leaf"
+    } else { return $null }
+    return $Type
+} # Get-PathType "R:\AAA.txt"
+
+# 獲取檔案項目
+function Get-FilePathItem {
+    param (
+        [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
+        [string] $Path,
+        [Parameter(ParameterSetName = "")]
+        [regex] $MatchPath,
+        [regex] $NotMatchPath,
+        [Parameter(ParameterSetName = "")]
+        [array] $Include
+    )
+
+    # 檢測路徑
+    if (!(Test-Path -Path $Path)) { return }
+    
+    # 獲取檔案並透過管道進行過濾
+    Get-ChildItem -Path $Path -Include $Include -Recurse -File |
+        ForEach-Object {
+            # 過濾檔案路徑
+            if ($MatchPath -and $_.FullName -notmatch $MatchPath) {
+                return
+            }
+            if ($NotMatchPath -and $_.FullName -match $NotMatchPath) {
+                return
+            }
+
+            # 輸出符合條件的物件
+            $_
+        }
+} # (Get-FilePathItem "R:\AAA" -NotMatchPath "CCC").FullName
+
+# 獲取相對路徑
+function Convert-ToRelativePath {
+    param (
+        [Parameter(Position = 0, ParameterSetName = "", Mandatory, ValueFromPipeline)]
+        [string] $Path,
+        [Parameter(ParameterSetName = "")]
+        [string] $BasePath
+    )
+    begin {
+        if ([string]::IsNullOrEmpty($BasePath)) { $BasePath = Get-Location }
+    }
+    process {
+        [System.IO.Path]::GetRelativePath($BasePath, $Path)
+    }
+} # ((Get-FilePathItem "R:\AAA").FullName) | Convert-ToRelativePath
+# ((Get-FilePathItem "old").FullName) | Convert-ToRelativePath
+
+
 
 
 # 批量轉換編碼
@@ -476,8 +540,7 @@ function cvEnc {
     
     # $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     # cvEnc "f001.data" "R:\file1.data" 65001 65001
-    # # cvEnc "enc\Encoding_UTF8.txt" "R:\file1.data" 65001 65001 -BufferedWrite
+    # cvEnc "enc\Encoding_UTF8.txt" "R:\file1.data" 65001 65001 -BufferedWrite
     # $stopwatch.Stop()
-    
     # Write-Host "Time for buffered2 writing: $($stopwatch.Elapsed.TotalSeconds*1000)m seconds"     # ReadToEnd
 # } __Test_cvEnc__
