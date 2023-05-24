@@ -1,6 +1,8 @@
 # 載入Get-Encoding函式
 Invoke-RestMethod 'raw.githubusercontent.com/hunandy14/Get-Encoding/master/Get-Encoding.ps1'|Invoke-Expression
 
+
+
 # 讀取檔案
 function ReadContent {
     [CmdletBinding(DefaultParameterSetName = "Encoding")]
@@ -67,21 +69,7 @@ function ReadContent {
             Write-Host " milliseconds in ReadContent() for reading file '$file'"
         }
     }
-}
-# ReadContent "enc\Encoding_SHIFT.txt" 932
-# ReadContent "enc\Encoding_UTF8.txt" UTF8
-# ReadContent "enc\Encoding_UTF8_0.txt" UTF8
-# ReadContent "enc\Encoding_UTF8_1.txt" UTF8
-
-# function WriteContent2 {
-#     param (
-#         [Parameter(ValueFromPipeline, ParameterSetName = "")]
-#         [System.Object] $InputObject
-#     )
-# }
-# $CT = ReadContent "f001.data" 65001 -ShowTimeTaken
-# ReadContent "f001.data" 65001 -ShowTimeTaken | WriteContent2
-
+} # ReadContent "enc\Encoding_UTF8_1.txt" UTF8
 
 
 
@@ -127,6 +115,7 @@ function WriteContent {
                 $Enc = $__SysEnc__
             }
         }
+        
         # 檢查路徑
         if ($Path) {
             $Path = [IO.Path]::GetFullPath([IO.Path]::Combine((Get-Location -PSProvider FileSystem).ProviderPath, $Path))
@@ -139,6 +128,7 @@ function WriteContent {
                 New-Item $Path -ItemType:File -Force | Out-Null
             }
         }
+        
         # 換行符號
         $LineTerminator = if ($LF) { "`n" } else { "`r`n" }
         # FileMode 參數
@@ -152,11 +142,6 @@ function WriteContent {
         if ($ShowTimeTaken) { $stopwatch = [System.Diagnostics.Stopwatch]::StartNew() }
     }
     
-    
-    # process { # 107/200
-    #     $StreamWriter.WriteLine($InputObject)
-    # }
-    
     process { # 125/290
         # 清除行尾空白
         if ($TrimWhiteSpace) { $InputObject = $InputObject.TrimEnd() }
@@ -168,43 +153,9 @@ function WriteContent {
         $emptyLines += 1
     }
     
-    # process { #164/290
-    #     $line = $InputObject
-    #     # $str = "" # BBB
-    #     # 清除行尾空白
-    #     if ($TrimWhiteSpace) {
-    #         $line = $line.TrimEnd()
-    #     }
-    #     # 追加換行(首行不換)
-    #     if(-not $firstLine) {
-    #         # $str = $str + $LineTerminator # BBB# AAA
-    #         $StreamWriter.Write($LineTerminator) 
-    #     } else { $firstLine = $false }
-    #     # # 寫入檔案 (遇到非空白行時)
-    #     if ($line -notmatch "^\s*$" -or !$ForceOneEndLine) {
-    #         if ($emptyLines -gt 0) {
-    #             for ($i = 0; $i -lt $emptyLines; $i++) {
-    #                 # $str = $str + $LineTerminator # BBB
-    #                 $StreamWriter.Write($LineTerminator) # AAA
-    #             } $emptyLines = 0
-    #         }
-    #         # 寫入記憶體緩存
-    #         # $StreamWriter.Write($str) # BBB
-    #         # $StreamWriter.Write($line) # BBB 平均::174
-    #         $StreamWriter.Write($line) # AAA 平均::161
-    #     } else {
-    #         $emptyLines += 1
-    #     }
-        
-    #     # $StreamWriter.WriteLine($InputObject)
-    # }
-    
     end {
+        # 計時結束
         if ($ShowTimeTaken) { $stopwatch.Stop() }
-        # 保持結尾至少有一行空白
-        # if (($AutoAppendEndLine -and ($InputObject -ne $LineTerminator)) -or ($emptyLines -gt 0)) {
-        #     $StreamWriter.Write($LineTerminator)
-        # }
         
         # 輸出剩餘的換行 
         $emptyLines -= 1
@@ -224,56 +175,7 @@ function WriteContent {
             Write-Host " milliseconds in ReadContent() for reading file '$file'"
         }
     }
-}
-## 種編碼讀寫範例
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt"
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out2.txt" big5
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out3.txt" UTF8
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out4.txt" -UTF8BOM
-# "あいうえお日本語の入力テスト                  "|WriteContent "out\Out5.txt" 932
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\Out1.txt" -Append
-# "ㄅㄆㄇㄈ這是中文，到底要幾個字才可以自動判別呢"|WriteContent "out\new\Out1.txt" -Append
-## 結尾空行測試
-# "0行空格測試"|WriteContent "out\Out11.txt" -UTF8BOM
-# @("1行空格測試", "")|WriteContent "out\Out12.txt" -UTF8BOM
-# @("1行空格測試`r`n")|WriteContent "out\Out12.txt" -UTF8BOM
-# @("2行空格測試", "", "")|WriteContent "out\Out13.txt" -UTF8BOM
-# @("2行空格測試", "`r`n")|WriteContent "out\Out13.txt" -UTF8BOM -ShowTimeTaken
-
-# @"
-# 2行空格測試
-
-
-# 123
-
-
-
-# 33
-# "@ | WriteContent "out\Out13.txt" -UTF8BOM
-## 組合測試 230
-# $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-# ReadContent "f001.data" 65001 | WriteContent "R:\file1.data" -UTF8
-# $stopwatch.Stop()
-# $time = $stopwatch.Elapsed.TotalSeconds*1000
-# Write-Host "Elapsed time: $time milliseconds"
-
-# 跑分測試
-# $ct = ReadContent "f001.data" 65001 -ShowTimeTaken
-# $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-# $tt = 0
-# $cc = 20
-# for ($i = 0; $i -lt $cc; $i++) {
-#     $ct|WriteContent "R:\file1.data" -UTF8 -ShowTimeTaken
-#     $tt += $time
-# } 
-# Write-Host "平均:" $($tt/$cc)
-
-# 空行缺失測試
-# $CT = ReadContent "enc\Encoding_UTF8.txt" 65001 -ShowTimeTaken
-# $CT | WriteContent "R:\Out21.txt" -UTF8 
-
-# ReadContent "enc\Encoding_UTF8.txt" 65001 | WriteContent "out\Out21.txt" -UTF8 -AutoAppendEndLine
-# Write-Host "Time for WriteContent writing: $($stopwatch.Elapsed.TotalSeconds*1000)m seconds"
+} # ReadContent "enc\Encoding_UTF8.txt" -UTF8 | WriteContent "out\Encoding_TrimFile_UTF8BOM.txt" -UTF8BOM -TrimWhiteSpace -ForceOneEndLine
 
 
 
@@ -308,25 +210,6 @@ function Get-FilePathItem {
         return
     }
 } # (Get-FilePathItem "R:\AAA" -NotMatchPath "CCC").FullName
-
-
-
-# 獲取相對路徑
-function Convert-ToRelativePath {
-    param (
-        [Parameter(Position = 0, ParameterSetName = "", Mandatory, ValueFromPipeline)]
-        [string] $Path,
-        [Parameter(ParameterSetName = "")]
-        [string] $BasePath
-    )
-    begin {
-        if ([string]::IsNullOrEmpty($BasePath)) { $BasePath = Get-Location }
-    }
-    process {
-        [System.IO.Path]::GetRelativePath($BasePath, $Path)
-    }
-} # ((Get-FilePathItem "R:\AAA").FullName) | Convert-ToRelativePath
-# ((Get-FilePathItem "old").FullName) | Convert-ToRelativePath
 
 
 
@@ -388,8 +271,6 @@ function cvEnc {
     }
     if (!$srcEncName -or !$dstEncName) { Write-Error "[錯誤]:: 編碼輸入有誤, 檢查是否打錯號碼了" -ErrorAction Stop}
     
-    
-    
     # 檢查 $srcPath 是否存在
     if (!(Test-Path -Path $srcPath)) { Write-Error "錯誤: $srcPath 路徑不存在" -EA:Stop }
     # 檢查 $srcPath 和 $dstPath 參數
@@ -436,11 +317,10 @@ function cvEnc {
                 }
                 $emptyLines += 1
             }
-            # 補償結尾換行
+            # 補償結尾換行 (最後一行沒有換行符則不補償換行)
             $StreamReader.BaseStream.Position -= 1
-            if ([char]$StreamReader.Read() -eq "`n") { $emptyLines += 1 }
-            # 輸出剩餘的換行 
-            $emptyLines -= 1
+            if ([char]$StreamReader.Read() -ne "`n") { $emptyLines -= 1 }
+            # 輸出剩餘的換行
             if ($ForceOneEndLine -or ($EnsureOneEndLine -and $emptyLines -eq 0)) { $emptyLines = 1 }
             $StreamWriter.Write($LineTerminator*$emptyLines); $emptyLines = 0
             # 關閉檔案
@@ -449,51 +329,15 @@ function cvEnc {
             
             # 測試用呼叫單獨函式
             # ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -ShowTimeTaken
-        }
-        # 開啟暫存目錄
-        if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
+        }        
     }
+    
+    
+    # 開啟暫存目錄
+    if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
 }
 
-# cvEnc ".\file1.txt" "R:\cvEnd" 932 65001
-# cvEnc ".\file1.txt" "R:\cvEnd\file1.txt" 932 65001
+# cvEnc "enc\Encoding_BIG5.txt" "R:\cvEnd"
+# cvEnc "enc\Encoding_UTF8.txt" "R:\cvEnd\file1.txt" 932
 # cvEnc "enc" "R:\cvEnd\enc" 932 65001
 # cvEnc "enc" "R:\cvEnd\file1.txt" 932 65001
-
-# function __Test_cvEnc__ {
-    # 轉換相對路徑資料測試
-    # $path1 = ".\enc\932"
-    # $path2 = ".\out"
-    # cvEnc $path1 $path2 932
-    # cvEnc $path1 $path2 932 -TrimFile
-    # 轉換相對路徑檔案測試
-    # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932
-    # cvEnc ".\enc\Trim.txt" ".\out.txt" -TrimFile
-    #
-    # 轉換絕對路徑資料夾測試
-    # $path1 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\enc\932"
-    # $path2 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\out"
-    # cvEnc $path1 $path2 932
-    # cvEnc $path1 $path2 932 -TrimFile
-    # 轉換絕對路徑檔案測試
-    # $path1 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\enc\932\Trim.txt"
-    # $path2 = "C:\Users\hunan\OneDrive\Git Repository\pwshApp\cvEncode\out.txt"
-    # cvEnc $path1 $path2 932
-    # cvEnc $path1 $path2 932 -TrimFile
-    # 
-    # 空路徑自動指定到暫存目錄
-    # cvEnc ".\enc\932\kyouto.txt" 932 -Temp
-    # cvEnc ".\enc\932\kyouto.txt" 932 65001
-    # cvEnc ".\enc\932\kyouto.txt" ".\out.txt" 932 65001
-    # cvEnc ".\enc\932" 932 65001
-    # 
-    # 預選編碼測試
-    # cvEnc "enc\Encoding_UTF8.txt" -ConvertToUTF8 -Temp
-    # cvEnc "enc\Encoding_BIG5.txt" -ConvertToSystem -Temp
-    
-    # $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    # cvEnc "f001.data" "R:\file1.data" 65001 65001                                                 # 250
-    # cvEnc "enc\Encoding_UTF8.txt" "R:\file1.data" 65001 65001 -BufferedWrite
-    # $stopwatch.Stop()
-    # Write-Host "Time for buffered2 writing: $($stopwatch.Elapsed.TotalSeconds*1000)m seconds"     # ReadToEnd
-# } __Test_cvEnc__
