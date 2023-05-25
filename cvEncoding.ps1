@@ -221,28 +221,26 @@ function cvEnc {
         [string] $srcPath,
         [Parameter(Position = 1, ParameterSetName = "A", Mandatory)]
         [string] $dstPath,
+        
         [Parameter(Position = 2, ParameterSetName = "A")]
         [Parameter(Position = 1, ParameterSetName = "B")]
-        [int] $srcEnc = [Text.Encoding]::Default.CodePage,
-        
+        [object] $srcEnc,
         [Parameter(Position = 3, ParameterSetName = "A")]
         [Parameter(Position = 2, ParameterSetName = "B")]
-        [int] $dstEnc = 65001,
+        [object] $dstEnc,
         [switch] $ConvertToUTF8,
         [switch] $ConvertToSystem,
         
         [Parameter(ParameterSetName = "B")]
         [switch] $Temp,
         [Parameter(ParameterSetName = "")]
-        [System.Object] $Filter = @("*.*"),
+        [object] $Filter,
         [Parameter(ParameterSetName = "")]
         [switch] $Preview,
         [Parameter(ParameterSetName = "")]
         [switch] $TrimFile
     )
     
-    # 獲取當前位置
-    if ($PSScriptRoot) { $curDir = $PSScriptRoot } else { $curDir = (Get-Location).Path }
     # 輸出位置為空時自動指定到暫存目錄
     if ($Temp) {
         $dstPath = $env:TEMP+"\cvEncode"
@@ -255,21 +253,24 @@ function cvEnc {
     
     # 編碼名稱
     if (!$__SysEnc__) { $Script:__SysEnc__ = [Text.Encoding]::GetEncoding((powershell -nop "([Text.Encoding]::Default).WebName")) }
+    if (!$srcEnc) { $srcEnc = $__SysEnc__ }
+    if (!$dstEnc) { $dstEnc = [Text.Encoding]::GetEncoding(65001) }
+    # 預選
     if ($ConvertToUTF8) {
-        $srcEnc = ($__SysEnc__).CodePage
-        $srcEncName = ($__SysEnc__).WebName
-        $dstEnc = (New-Object System.Text.UTF8Encoding $False).CodePage
-        $dstEncName = (New-Object System.Text.UTF8Encoding $False).WebName
+        $srcEnc = ($__SysEnc__)
+        $dstEnc = (New-Object System.Text.UTF8Encoding $False)
     } elseif ($ConvertToSystem) {
-        $srcEnc = (New-Object System.Text.UTF8Encoding $False).CodePage
-        $srcEncName = (New-Object System.Text.UTF8Encoding $False).WebName
-        $dstEnc = ($__SysEnc__).CodePage
-        $dstEncName = ($__SysEnc__).CodePage
+        $srcEnc = (New-Object System.Text.UTF8Encoding $False)
+        $dstEnc = ($__SysEnc__)
     } else {
-        $srcEncName = [Text.Encoding]::GetEncoding($srcEnc).WebName
-        $dstEncName = [Text.Encoding]::GetEncoding($dstEnc).WebName
+        if ($srcEnc -isnot [Text.Encoding]) {
+            $srcEnc = Get-Encoding $srcEnc
+        }
+        if ($dstEnc -isnot [Text.Encoding]) {
+            $dstEnc = Get-Encoding $dstEnc
+        }
     }
-    if (!$srcEncName -or !$dstEncName) { Write-Error "[錯誤]:: 編碼輸入有誤, 檢查是否打錯號碼了" -ErrorAction Stop}
+    if (!$srcEnc.WebName -or !$dstEnc.WebName) { Write-Error "[錯誤]:: 編碼輸入有誤, 檢查是否打錯號碼了" -ErrorAction Stop}
     
     # 檢查 $srcPath 是否存在
     if (!(Test-Path -Path $srcPath)) { Write-Error "錯誤: $srcPath 路徑不存在" -EA:Stop }
@@ -290,8 +291,8 @@ function cvEnc {
     
     # 開始轉換檔案
     $TrimWhiteSpace = $ForceOneEndLine = $TrimFile
-    Write-Host ("Convert Files:: [$srcEncName($srcEnc) --> $dstEncName($dstEnc)]") -ForegroundColor DarkGreen
-    foreach ($_ in (Get-FilePathItem $srcPath).FullName) {
+    Write-Host ("Convert Files:: [$($srcEnc.WebName)($($srcEnc.CodePage)) --> $($dstEnc.WebName)($($dstEnc.CodePage))]") -ForegroundColor DarkGreen
+    foreach ($_ in (Get-FilePathItem $srcPath -Include:$Filter).FullName) {
         # 獲取路徑
         $F1 = $_
         $F2 = if ($dstPathType -eq "File") { $dstPath } else { Join-Path $dstPath ([System.IO.Path]::GetRelativePath($srcPath, $_)) }
@@ -303,8 +304,8 @@ function cvEnc {
         # 輸出檔案
         if (!$Preview) {
             if (!(Test-Path -Path $F2)) { New-Item -ItemType:File $F2 -Force | Out-Null }
-            $StreamReader = New-Object System.IO.StreamReader($F1, [Text.Encoding]::GetEncoding($srcEnc))
-            $StreamWriter = New-Object System.IO.StreamWriter($F2, $false, [Text.Encoding]::GetEncoding($dstEnc))
+            $StreamReader = New-Object System.IO.StreamReader($F1, $srcEnc)
+            $StreamWriter = New-Object System.IO.StreamWriter($F2, $false, $dstEnc)
             $LineTerminator = if ($LF) { "`n" } else { "`r`n" }
             $emptyLines = 0
             while ($null -ne ($line = $StreamReader.ReadLine())) {
