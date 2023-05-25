@@ -214,8 +214,8 @@ function Get-FilePathItem {
 
 
 # 批量轉換編碼
-function cvEnc {
-    [CmdletBinding(DefaultParameterSetName = "A")]
+function Convert-FileEncoding {
+    [Alias("cvEnc")] [CmdletBinding(DefaultParameterSetName = "A")]
     param (
         [Parameter(Position = 0, ParameterSetName = "", Mandatory)]
         [string] $srcPath,
@@ -224,10 +224,10 @@ function cvEnc {
         
         [Parameter(Position = 2, ParameterSetName = "A")]
         [Parameter(Position = 1, ParameterSetName = "B")]
-        [object] $srcEnc,
+        [object] $srcEnc, # 預設值為系統編碼
         [Parameter(Position = 3, ParameterSetName = "A")]
         [Parameter(Position = 2, ParameterSetName = "B")]
-        [object] $dstEnc,
+        [object] $dstEnc, # 預設值為UTF8
         [switch] $ConvertToUTF8,
         [switch] $ConvertToSystem,
         
@@ -263,12 +263,8 @@ function cvEnc {
         $srcEnc = (New-Object System.Text.UTF8Encoding $False)
         $dstEnc = ($__SysEnc__)
     } else {
-        if ($srcEnc -isnot [Text.Encoding]) {
-            $srcEnc = Get-Encoding $srcEnc
-        }
-        if ($dstEnc -isnot [Text.Encoding]) {
-            $dstEnc = Get-Encoding $dstEnc
-        }
+        if ($srcEnc -isnot [Text.Encoding]) { $srcEnc = Get-Encoding $srcEnc }
+        if ($dstEnc -isnot [Text.Encoding]) { $dstEnc = Get-Encoding $dstEnc }
     }
     if (!$srcEnc.WebName -or !$dstEnc.WebName) { Write-Error "[錯誤]:: 編碼輸入有誤, 檢查是否打錯號碼了" -ErrorAction Stop}
     
@@ -286,7 +282,6 @@ function cvEnc {
         $dstPath = Join-Path -Path $dstPath -ChildPath ($srcPath -replace '^(.*[\\/])')
         $dstPathType = "File"
     }
-    
     
     
     # 開始轉換檔案
