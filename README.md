@@ -64,30 +64,33 @@ powershell -c "irm bit.ly/cvEncoding|iex; cvEnc %path1% %path2% 932"
 ```
 
 ## API 使用範例2
+載入函式
+```ps1
+irm bit.ly/cvEncoding|iex; 
+```
+
 ReadContent
 ```ps1
-# 載入函式
-irm bit.ly/cvEncoding|iex; 
-
-# 讀取檔案
+# 讀取檔案 (系統編碼)
 ReadContent "enc\Encoding_UTF8.txt"
-ReadContent "enc\Encoding_BIG5.txt" 950
+# 讀取檔案 (UTF8)
+ReadContent "enc\Encoding_UTF8.txt" UTF8
+# 讀取檔案 (依照PowerShell編碼)
+ReadContent "enc\Encoding_UTF8.txt" -Encoding default
 ```
 
 WriteContent
 ```ps1
-# 載入函式
-irm bit.ly/cvEncoding|iex; 
-
-# 輸出到檔案 (依照PowerShell編碼)
-"中文BIG5"|WriteContent "out\Out1.txt"
 # 輸出到檔案 (依照作業系統編碼)
-"中文BIG5"|WriteContent "out\Out2.txt" -SystemEncoding
-# 追加到檔案 (BIG5)
-"中文BIG5"|WriteContent "out\Out3.txt" 950 -Append
-
+"中文BIG5"|WriteContent "out\Out.txt"
+# 追加到檔案
+"中文BIG5"|WriteContent "out\Out.txt" -Append
+# 輸出到檔案 (依照PowerShell編碼)
+"中文BIG5"|WriteContent "out\Out.txt" -Encoding default
 # 輸出到檔案 (UTF-8 無 BOM)
-"中文BIG5"|WriteContent "out\Out4.txt" 65001
+"中文BIG5"|WriteContent "out\Out.txt" UTF8
 # 輸出到檔案 (UTF-8 有 BOM)
-"中文BIG5"|WriteContent "out\Out5.txt" 65001 -BOM_UTF8
+"中文BIG5"|WriteContent "out\Out.txt" UTF8BOM
+"中文BIG5"|WriteContent "out\Out.txt" utf-8
+"中文BIG5"|WriteContent "out\Out.txt" 65001
 ```
