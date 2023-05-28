@@ -19,7 +19,6 @@ function ReadContent {
         [switch] $UTF8BOM,
         [switch] $ShowTimeTaken
     )
-    
     begin {
         # 處理編碼
         if ($Encoding) { # 自訂編碼
@@ -55,15 +54,25 @@ function ReadContent {
     }
     
     end {
-        # 補償結尾換行
+        # 補償結尾換行 (最後一行有換行符則補償換行)
         $StreamReader.BaseStream.Position -= 1
-        if ([char]$StreamReader.Read() -eq "`n") { "" }
+        $lastByte = $StreamReader.BaseStream.ReadByte()
+        if ($lastByte -eq 0x0A) {
+            ""
+        } elseif ($lastByte -eq 0x00) {
+            $StreamReader.BaseStream.Position -= 2
+            $lastByte = $StreamReader.BaseStream.ReadByte()
+            if ($lastByte -eq 0x0A) { # 可能是 UTF16(小端)
+                ""
+            }
+        }
+        
         # 關閉檔案
         if ($null -ne $StreamReader) { $StreamReader.Dispose() }
         # 顯示時間消耗
         if ($ShowTimeTaken) {
             $file = $path -replace '^(.*[\\/])'
-            $time = $stopwatch.Elapsed.TotalSeconds*1000
+            $time = $stopwatch.Elapsed.TotalMilliseconds
             Write-Host "Elapsed time: " -NoNewline
             Write-Host $time -NoNewline -ForegroundColor Yellow
             Write-Host " milliseconds in ReadContent() for reading file '$file'"
@@ -160,7 +169,7 @@ function WriteContent {
         # 輸出剩餘的換行 
         $emptyLines -= 1
         if ($ForceOneEndLine -or ($EnsureOneEndLine -and $emptyLines -eq 0)) { $emptyLines = 1 }
-        $StreamWriter.Write($LineTerminator*$emptyLines); $emptyLines = 0
+        if ($emptyLines -gt 0) { $StreamWriter.Write($LineTerminator*$emptyLines); $emptyLines = 0 }
         
         # 關閉檔案
         $StreamWriter.Close()
@@ -169,7 +178,7 @@ function WriteContent {
         # 顯示時間消耗
         if ($ShowTimeTaken) {
             $file = $path -replace '^(.*[\\/])'
-            $script:time = $stopwatch.Elapsed.TotalSeconds*1000
+            $script:time = $stopwatch.Elapsed.TotalMilliseconds
             Write-Host "Elapsed time: " -NoNewline
             Write-Host $time -NoNewline -ForegroundColor Yellow
             Write-Host " milliseconds in ReadContent() for reading file '$file'"
@@ -238,102 +247,137 @@ function Convert-FileEncoding {
         [Parameter(ParameterSetName = "")]
         [switch] $Preview,
         [Parameter(ParameterSetName = "")]
-        [switch] $TrimFile
+        [switch] $TrimFile,
+        [Parameter(ParameterSetName = "")]
+        [switch] $ShowTimeTaken
     )
     
-    # 輸出位置為空時自動指定到暫存目錄
-    if ($Temp) {
-        $dstPath = $env:TEMP+"\cvEncode"
-        $dstPath_bk = $env:TEMP + "\cvEncode_bk"
-        if (Test-Path $dstPath -PathType:Container) {
-            New-Item $dstPath_bk -ItemType:Directory -ErrorAction:SilentlyContinue
-            (Get-ChildItem "$dstPath" -Recurse) | Move-Item -Destination:$dstPath_bk -Force
+    begin {
+        # 輸出到暫時目錄
+        if ($Temp) {
+            $dstPath = Join-Path $env:TEMP "cvEncode"
+            $dstPath_bk = Join-Path $env:TEMP "cvEncode_bk"
+            if (Test-Path $dstPath -PathType:Container) { # 如果資料夾不為空一動到備份資料
+                New-Item $dstPath_bk -ItemType:Directory -ErrorAction:SilentlyContinue
+                (Get-ChildItem "$dstPath" -Recurse) | Move-Item -Destination:$dstPath_bk -Force
+            }
+        }
+        
+        # 編碼名稱
+        if (!$__SysEnc__) { $Script:__SysEnc__ = [Text.Encoding]::GetEncoding((powershell -nop "([Text.Encoding]::Default).WebName")) }
+        if (!$srcEnc) { $srcEnc = $__SysEnc__ }
+        if (!$dstEnc) { $dstEnc = [Text.Encoding]::GetEncoding(65001) }
+        # 預選
+        if ($ConvertToUTF8) {
+            $srcEnc = ($__SysEnc__)
+            $dstEnc = (New-Object System.Text.UTF8Encoding $False)
+        } elseif ($ConvertToSystem) {
+            $srcEnc = (New-Object System.Text.UTF8Encoding $False)
+            $dstEnc = ($__SysEnc__)
+        } else {
+            try {
+                if ($srcEnc -isnot [Text.Encoding]) { $srcEnc = Get-Encoding $srcEnc }
+            } catch { Write-Error "輸入編碼(srcEnc) '$srcEnc' 錯誤, 請檢查名稱是否有誤" -ErrorAction Stop }
+            try {
+                if ($dstEnc -isnot [Text.Encoding]) { $dstEnc = Get-Encoding $dstEnc }
+            } catch { Write-Error "輸出編碼(dstEnc) '$dstEnc' 錯誤, 請檢查名稱是否有誤" -ErrorAction Stop }
+        }
+        
+        # 檢查 $srcPath 是否存在
+        if (!(Test-Path -Path $srcPath)) { Write-Error "錯誤: $srcPath 路徑不存在" -EA:Stop }
+        # 檢查 $srcPath 和 $dstPath 參數
+        $srcPathType = if (Test-Path -Path $srcPath -PathType Leaf) {"File"} else {"Directory"}
+        $dstPathType = if (Test-Path -Path $dstPath -PathType Leaf) {"File"} elseif (Test-Path -Path $dstPath -PathType Container) {"Directory"} else { if ($dstPath -match '\.\w+$') {"File"} else {"Directory"} }
+        # 如果 $srcPath 是目錄，而 $dstPath 是文件，則輸出錯誤並停止執行
+        if ($srcPathType -eq "Directory" -and $dstPathType -eq "File") {
+            Write-Error "路徑錯誤, 無法將資料夾複製到檔案中" -ErrorAction Stop
+        }
+        # 如果 $srcPath 是文件，而 $dstPath 是目錄，則修改 $dstPath 並將 $dstPathType 設置為 "File"
+        if ($srcPathType -eq "File" -and $dstPathType -eq "Directory") {
+            $dstPath = Join-Path -Path $dstPath -ChildPath ($srcPath -replace '^(.*[\\/])')
+            $dstPathType = "File"
+        }
+        
+        # 計時開始
+        if ($ShowTimeTaken) { $stopwatch = [System.Diagnostics.Stopwatch]::StartNew() }
+        
+        # 清除檔案設定值
+        $TrimWhiteSpace = $ForceOneEndLine = $TrimFile
+    }    
+    
+    process {
+        # 開始轉換檔案
+        Write-Host ("Convert Files:: [$($srcEnc.WebName)($($srcEnc.CodePage)) --> $($dstEnc.WebName)($($dstEnc.CodePage))]") -ForegroundColor DarkGreen
+        foreach ($_ in (Get-FilePathItem $srcPath -Include:$Filter).FullName) {
+            # 獲取路徑
+            $F1 = $_
+            $F2 = if ($dstPathType -eq "File") { $dstPath } else { Join-Path $dstPath ([System.IO.Path]::GetRelativePath($srcPath, $_)) }
+            # 輸出信息
+            Write-Host "  From: " -NoNewline
+            Write-Host "$F1" -ForegroundColor:White
+            Write-Host "  └─To: " -NoNewline
+            Write-Host "$F2" -ForegroundColor:Yellow
+            # 輸出檔案
+            if (!$Preview) {
+                if (!(Test-Path -Path $F2)) { New-Item -ItemType:File $F2 -Force | Out-Null }
+                $StreamReader = New-Object System.IO.StreamReader($F1, $srcEnc)
+                $StreamWriter = New-Object System.IO.StreamWriter($F2, $false, $dstEnc)
+                $LineTerminator = if ($LF) { "`n" } else { "`r`n" }
+                $emptyLines = 0
+                while ($null -ne ($line = $StreamReader.ReadLine())) {
+                    # 清除行尾空白
+                    if ($TrimWhiteSpace) { $line = $line.TrimEnd() }
+                    # 寫入檔案 (遇到非空白行時)
+                    if ($line) {
+                        $StreamWriter.Write($LineTerminator*$emptyLines)
+                        $StreamWriter.Write($line); $emptyLines = 0
+                    }
+                    $emptyLines += 1
+                }
+                
+                # 補償結尾換行 (最後一行沒有換行符則不補償換行)
+                $StreamReader.BaseStream.Position -= 1
+                $lastByte = $StreamReader.BaseStream.ReadByte()
+                if ($lastByte -ne 0x0A) { # 結尾不是換行符號
+                    if ($lastByte -eq 0x00) { # 有可能是UTF16小端換行 (0A 00)
+                        $StreamReader.BaseStream.Position -= 2
+                        $lastByte = $StreamReader.BaseStream.ReadByte()
+                        if ($lastByte -ne 0x0A) { $emptyLines -= 1 }
+                    } else { $emptyLines -= 1 } # 不是0A也不是00 (普通文字)
+                }
+                
+                # 輸出剩餘的換行
+                if ($ForceOneEndLine -or ($EnsureOneEndLine -and $emptyLines -eq 0)) { $emptyLines = 1 }
+                if ($emptyLines -gt 0) { $StreamWriter.Write($LineTerminator*$emptyLines); $emptyLines = 0 }
+                
+                # 關閉檔案
+                $StreamReader.Close()
+                $StreamWriter.Close()
+                
+                # 測試用呼叫單獨函式
+                # ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -ShowTimeTaken
+            }
         }
     }
     
-    # 編碼名稱
-    if (!$__SysEnc__) { $Script:__SysEnc__ = [Text.Encoding]::GetEncoding((powershell -nop "([Text.Encoding]::Default).WebName")) }
-    if (!$srcEnc) { $srcEnc = $__SysEnc__ }
-    if (!$dstEnc) { $dstEnc = [Text.Encoding]::GetEncoding(65001) }
-    # 預選
-    if ($ConvertToUTF8) {
-        $srcEnc = ($__SysEnc__)
-        $dstEnc = (New-Object System.Text.UTF8Encoding $False)
-    } elseif ($ConvertToSystem) {
-        $srcEnc = (New-Object System.Text.UTF8Encoding $False)
-        $dstEnc = ($__SysEnc__)
-    } else {
-        if ($srcEnc -isnot [Text.Encoding]) { $srcEnc = Get-Encoding $srcEnc }
-        if ($dstEnc -isnot [Text.Encoding]) { $dstEnc = Get-Encoding $dstEnc }
+    end {
+        # 計時結束
+        if ($ShowTimeTaken) { $stopwatch.Stop() }
+        
+        # 顯示時間消耗
+        if ($ShowTimeTaken) {
+            $script:time = $stopwatch.Elapsed.TotalMilliseconds
+            Write-Host "Elapsed time: " -NoNewline
+            Write-Host $time -NoNewline -ForegroundColor Yellow
+            Write-Host " milliseconds for encoding conversion of file '$srcPath'"
+        }
+        
+        # 開啟暫存目錄
+        if ($Temp) { explorer $dstPath }
     }
-    if (!$srcEnc.WebName -or !$dstEnc.WebName) { Write-Error "[錯誤]:: 編碼輸入有誤, 檢查是否打錯號碼了" -ErrorAction Stop}
-    
-    # 檢查 $srcPath 是否存在
-    if (!(Test-Path -Path $srcPath)) { Write-Error "錯誤: $srcPath 路徑不存在" -EA:Stop }
-    # 檢查 $srcPath 和 $dstPath 參數
-    $srcPathType = if (Test-Path -Path $srcPath -PathType Leaf) {"File"} else {"Directory"}
-    $dstPathType = if (Test-Path -Path $dstPath -PathType Leaf) {"File"} elseif (Test-Path -Path $dstPath -PathType Container) {"Directory"} else { if ($dstPath -match '\.\w+$') {"File"} else {"Directory"} }
-    # 如果 $srcPath 是目錄，而 $dstPath 是文件，則輸出錯誤並停止執行
-    if ($srcPathType -eq "Directory" -and $dstPathType -eq "File") {
-        Write-Error "錯誤: 無法將資料夾複製到檔案中" -ErrorAction Stop
-    }
-    # 如果 $srcPath 是文件，而 $dstPath 是目錄，則修改 $dstPath 並將 $dstPathType 設置為 "File"
-    if ($srcPathType -eq "File" -and $dstPathType -eq "Directory") {
-        $dstPath = Join-Path -Path $dstPath -ChildPath ($srcPath -replace '^(.*[\\/])')
-        $dstPathType = "File"
-    }
-    
-    
-    # 開始轉換檔案
-    $TrimWhiteSpace = $ForceOneEndLine = $TrimFile
-    Write-Host ("Convert Files:: [$($srcEnc.WebName)($($srcEnc.CodePage)) --> $($dstEnc.WebName)($($dstEnc.CodePage))]") -ForegroundColor DarkGreen
-    foreach ($_ in (Get-FilePathItem $srcPath -Include:$Filter).FullName) {
-        # 獲取路徑
-        $F1 = $_
-        $F2 = if ($dstPathType -eq "File") { $dstPath } else { Join-Path $dstPath ([System.IO.Path]::GetRelativePath($srcPath, $_)) }
-        # 輸出信息
-        Write-Host "  From: " -NoNewline
-        Write-Host "$F1" -ForegroundColor:White
-        Write-Host "  └─To: " -NoNewline
-        Write-Host "$F2" -ForegroundColor:Yellow
-        # 輸出檔案
-        if (!$Preview) {
-            if (!(Test-Path -Path $F2)) { New-Item -ItemType:File $F2 -Force | Out-Null }
-            $StreamReader = New-Object System.IO.StreamReader($F1, $srcEnc)
-            $StreamWriter = New-Object System.IO.StreamWriter($F2, $false, $dstEnc)
-            $LineTerminator = if ($LF) { "`n" } else { "`r`n" }
-            $emptyLines = 0
-            while ($null -ne ($line = $StreamReader.ReadLine())) {
-                # 清除行尾空白
-                if ($TrimWhiteSpace) { $line = $line.TrimEnd() }
-                # 寫入檔案 (遇到非空白行時)
-                if ($line) {
-                    $StreamWriter.Write($LineTerminator*$emptyLines)
-                    $StreamWriter.Write($line); $emptyLines = 0
-                }
-                $emptyLines += 1
-            }
-            # 補償結尾換行 (最後一行沒有換行符則不補償換行)
-            $StreamReader.BaseStream.Position -= 1
-            if ([char]$StreamReader.Read() -ne "`n") { $emptyLines -= 1 }
-            # 輸出剩餘的換行
-            if ($ForceOneEndLine -or ($EnsureOneEndLine -and $emptyLines -eq 0)) { $emptyLines = 1 }
-            $StreamWriter.Write($LineTerminator*$emptyLines); $emptyLines = 0
-            # 關閉檔案
-            $StreamReader.Close()
-            $StreamWriter.Close()
-            
-            # 測試用呼叫單獨函式
-            # ReadContent $F1 $srcEnc | WriteContent $F2 $dstEnc -TrimWhiteSpace:$TrimFile -ForceOneEndLine:$TrimFile -ShowTimeTaken
-        }        
-    }
-    
-    
-    # 開啟暫存目錄
-    if ($Temp) { explorer "$($env:TEMP)\cvEncode" }
 }
-
 # cvEnc "enc\Encoding_BIG5.txt" "R:\cvEnd"
 # cvEnc "enc\Encoding_UTF8.txt" "R:\cvEnd\file1.txt" 932
 # cvEnc "enc" "R:\cvEnd\enc" 932 65001
 # cvEnc "enc" "R:\cvEnd\file1.txt" 932 65001
+# cvEnc "enc\Encoding_UTF16.txt" "R:\cvEnd" utf-16 -ShowTimeTaken
