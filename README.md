@@ -13,15 +13,23 @@ PowerShell 檔案編碼轉換器
 ### 查詢編碼代號
 
 ```ps1
-# 查詢 GB2312 的編碼 (936)
+# 日文::Shift-JIS (932)
+[Text.Encoding]::GetEncoding('Shift-JIS')
+# 簡體中文::GB2312 (936)
 [Text.Encoding]::GetEncoding('GB2312')
-# 查詢 UTF8 的編碼 (65001)
+# 繁體中文::BIG5 (950)
+[Text.Encoding]::GetEncoding('BIG5')
+# 萬國碼::UTF8 (65001)
 [Text.Encoding]::GetEncoding('UTF-8')
-# 查詢 UTF8-NonBOM 的編碼 (65001)
+
+# 萬國碼::UTF8-BOM (65001)
+(New-Object System.Text.UTF8Encoding $True)
+# 萬國碼::UTF8-NonBOM (65001)
 (New-Object System.Text.UTF8Encoding $False)
-# 查詢 本機 編碼
+
+# 當前系統編碼
 PowerShell -Nop "& {return [Text.Encoding]::Default}"
-# 查詢 Pwsh 當前編碼
+# 當前 PowerShell 編碼
 [Text.Encoding]::Default
 ```
 
