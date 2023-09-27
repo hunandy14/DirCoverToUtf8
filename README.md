@@ -31,6 +31,18 @@ PowerShell 檔案編碼轉換器
 PowerShell -Nop "& {return [Text.Encoding]::Default}"
 # 當前 PowerShell 編碼
 [Text.Encoding]::Default
+
+
+# PowerShell輸出編碼 (PowerShell 字符串到外部命令)
+$OutputEncoding = [Text.Encoding]::GetEncoding(65001)
+# PowerShell控制編碼 (PowerShell 字符串到控制台輸入/顯示)
+[console]::InputEncoding = [Text.Encoding]::GetEncoding(65001)
+[console]::OutputEncoding = [Text.Encoding]::GetEncoding(65001)
+
+# 上面三個可以串起來一起設置(UTF8)
+$OutputEncoding=[console]::InputEncoding=[console]::OutputEncoding = [Text.Encoding]::GetEncoding('UTF-8')
+
+
 ```
 
 ## API 使用範例
