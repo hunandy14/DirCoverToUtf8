@@ -10,7 +10,17 @@ PowerShell 檔案編碼轉換器
 - @param -TrimFile : 消除行末空白與結尾多餘換行
 - @param -Filter   : 僅轉換特定副檔名的檔案
 
-### 查詢編碼代號
+
+快速使用
+
+```ps1
+irm bit.ly/cvEncoding|iex;cvEnc $path1 $path2 932 950
+```
+
+
+<br>
+
+## 查詢編碼代號
 
 ```ps1
 # 日文::Shift-JIS (932)
@@ -31,19 +41,33 @@ PowerShell 檔案編碼轉換器
 PowerShell -Nop "& {return [Text.Encoding]::Default}"
 # 當前 PowerShell 編碼
 [Text.Encoding]::Default
-
-
-# PowerShell輸出編碼 (PowerShell 字符串到外部命令)
-$OutputEncoding = [Text.Encoding]::GetEncoding(65001)
-# PowerShell控制編碼 (PowerShell 字符串到控制台輸入/顯示)
-[console]::InputEncoding = [Text.Encoding]::GetEncoding(65001)
-[console]::OutputEncoding = [Text.Encoding]::GetEncoding(65001)
-
-# 上面三個可以串起來一起設置(UTF8)
-$OutputEncoding=[console]::InputEncoding=[console]::OutputEncoding = [Text.Encoding]::GetEncoding('UTF-8')
-
-
 ```
+
+### PowerShell 編碼設置
+```ps1
+# PowerShell輸出編碼 (PowerShell 字符串到外部命令)
+$global:OutputEncoding = [Text.Encoding]::GetEncoding(932)
+# PowerShell控制編碼 (PowerShell 字符串到控制台輸入/顯示)
+[console]::InputEncoding = [Text.Encoding]::GetEncoding(932)
+[console]::OutputEncoding = [Text.Encoding]::GetEncoding(932)
+```
+
+> 注意避免設置為 [Text.Encoding]::GetEncoding('UTF-8')   
+> 因為這個預設是帶有BOM的會導致輸出前端出現亂碼(其實就是BOM標誌)  
+
+
+### 上面三個可以串起來一起設置
+```ps1
+$OutputEncoding=[console]::InputEncoding=[console]::OutputEncoding = (New-Object Text.UTF8Encoding $False)
+```
+
+```ps1
+$OutputEncoding=[console]::InputEncoding=[console]::OutputEncoding = [Text.Encoding]::GetEncoding(932)
+```
+
+
+
+<br><br><br>
 
 ## API 使用範例
 
@@ -82,6 +106,8 @@ SET path2=".\out"
 powershell -c "irm bit.ly/cvEncoding|iex; cvEnc %path1% %path2% 932"
 
 ```
+
+<br>
 
 ## API 使用範例2
 載入函式
